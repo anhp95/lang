@@ -1,0 +1,24 @@
+/* App-specific styles */
+.deckgl-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Custom scrollbar for detail windows */
+.detail-window-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.detail-window-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.detail-window-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.detail-window-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
