@@ -1,91 +1,135 @@
 import React from 'react';
 
 interface DataTableProps {
-  layer: any;
+  layers: any[];
+  activeLayerId: string;
   onRowClick: (record: any) => void;
-  onClose: () => void;
+  onTabChange: (layerId: string) => void;
+  onCloseTab: (layerId: string) => void;
+  onCloseAll: () => void;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ layer, onRowClick, onClose }) => {
+const DataTable: React.FC<DataTableProps> = ({ layers, activeLayerId, onRowClick, onTabChange, onCloseTab, onCloseAll }) => {
+  const [isMinimized, setIsMinimized] = React.useState(false);
+  
+  const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+
   const filteredData = React.useMemo(() => {
-    if (!layer || !layer.data) return [];
+    if (!activeLayer || !activeLayer.data) return [];
     
-    return layer.data.filter((d: any) => {
-        if (layer.filters?.search) {
-            const search = layer.filters.search.toLowerCase();
+    return activeLayer.data.filter((d: any) => {
+        if (activeLayer.filters?.search) {
+            const search = activeLayer.filters.search.toLowerCase();
             const nameMatch = (d.Name || d.name || '').toLowerCase().includes(search);
             const descMatch = (d.Description || d.description || '').toLowerCase().includes(search);
             if (!nameMatch && !descMatch) return false;
         }
-        if (layer.filters?.parameter_filter && !(d.parameter_name || '').toLowerCase().includes(layer.filters.parameter_filter.toLowerCase())) return false;
-        if (layer.filters?.form_filter && !(d.form_value || '').toLowerCase().includes(layer.filters.form_filter.toLowerCase())) return false;
+        if (activeLayer.filters?.parameter_filter && !(d.parameter_name || '').toLowerCase().includes(activeLayer.filters.parameter_filter.toLowerCase())) return false;
+        if (activeLayer.filters?.form_filter && !(d.form_value || '').toLowerCase().includes(activeLayer.filters.form_filter.toLowerCase())) return false;
         return true;
     });
-  }, [layer?.data, layer?.filters]);
+  }, [activeLayer?.data, activeLayer?.filters, activeLayer?.id]);
 
-  const displayData = filteredData.slice(0, 100); // Show first 100 in table for performance
+  const displayData = filteredData.slice(0, 100);
   const total = filteredData.length;
 
-
-  if (!layer) return null;
+  if (layers.length === 0) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-white shadow-2xl z-30 flex flex-col transition-all duration-300" style={{ height: '35vh' }}>
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-100">
-        <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold uppercase text-gray-500 tracking-wider">Viewing Layer:</span>
-            <span className="text-sm font-bold text-blue-600">{layer.dataset}</span>
-        </div>
-        <div className="flex items-center space-x-4">
-            <span className="text-xs font-medium text-gray-500">{total.toLocaleString()} records found</span>
-            <button 
-                onClick={onClose}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-                title="Close Table"
-            >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-        </div>
-      </div>
-      
-      <div className="overflow-auto flex-1">
-      <div className="overflow-auto flex-1 custom-scrollbar">
-        {total === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400 font-bold uppercase tracking-widest text-xs">
-            No records match filters
-          </div>
-        ) : (
-          <div>
-            <table className="w-full text-[13px]">
-              <thead className="bg-white sticky top-0 shadow-sm z-10">
-                <tr>
-                  {displayData.length > 0 && Object.keys(displayData[0]).filter(key => !['geom', 'data', 'isLoading'].includes(key)).map(key => (
-                    <th key={key} className="px-4 py-3 text-left font-black text-gray-400 uppercase tracking-tighter border-b text-[10px]">{key.replace('_', ' ')}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white">
-                {displayData.map((record, i) => (
-                  <tr 
-                    key={i}
-                    onClick={() => onRowClick(record)}
-                    className="border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors group"
-                  >
-                    {Object.entries(record).filter(([key]) => !['geom', 'data', 'isLoading'].includes(key)).map(([_, v]: [any, any], j) => (
-                      <td key={j} className="px-4 py-2.5 text-gray-600 truncate max-w-xs group-hover:text-blue-700 font-medium">{v?.toString() || '-'}</td>
-                    ))}
-                  </tr>
+    <div 
+        className={`fixed z-30 transition-all duration-500 ease-in-out ${isMinimized ? 'bottom-4 left-88 h-12 w-64' : 'bottom-6 left-88 right-6 h-[45vh]'}`}
+    >
+      <div className="w-full h-full bg-white shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] rounded-2xl border border-gray-100 flex flex-col overflow-hidden">
+        {/* Tab Bar */}
+        <div className={`flex items-center bg-gray-50/50 border-b px-2 overflow-x-auto no-scrollbar transition-all ${isMinimized ? 'h-12 border-none bg-transparent' : 'h-12'}`}>
+            <div className="flex items-center h-full flex-1">
+                {layers.map(l => (
+                    <div 
+                        key={l.id}
+                        className={`group flex items-center h-full px-4 border-r border-gray-100 cursor-pointer transition-all relative min-w-30 max-w-50
+                            ${activeLayerId === l.id ? 'bg-white shadow-sm' : 'hover:bg-gray-100/50'}
+                        `}
+                        onClick={() => {
+                            onTabChange(l.id);
+                            if (isMinimized) setIsMinimized(false);
+                        }}
+                    >
+                        <div className="flex items-center space-x-2 min-w-0 pr-6">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{backgroundColor: `rgb(${l.color[0]}, ${l.color[1]}, ${l.color[2]})`}} />
+                            <span className={`text-[10px] font-black uppercase tracking-tight truncate ${activeLayerId === l.id ? 'text-blue-600' : 'text-gray-500'}`}>{l.dataset}</span>
+                        </div>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onCloseTab(l.id); }}
+                            className={`absolute right-2 p-1 rounded-md transition-colors ${activeLayerId === l.id ? 'text-gray-300 hover:text-red-500 hover:bg-red-50' : 'opacity-0 group-hover:opacity-100 text-gray-400'}`}
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                        {activeLayerId === l.id && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600" />}
+                    </div>
                 ))}
-              </tbody>
-            </table>
-            {total > 100 && (
-                <div className="p-3 text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50/50 border-t">
-                    Showing first 100 of {total} optimized markers
+            </div>
+
+            <div className="flex items-center space-x-1 px-2 border-l border-gray-100">
+                <button 
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                    title={isMinimized ? "Expand" : "Minimize"}
+                >
+                    <svg className={`w-4 h-4 transition-transform duration-300 ${isMinimized ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button 
+                    onClick={onCloseAll}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                    title="Close All Tabs"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+        </div>
+        
+        {/* Table Content */}
+        {!isMinimized && (
+            <div className="flex-1 overflow-hidden flex flex-col pt-2 bg-white">
+                <div className="px-6 py-1 flex items-center justify-between">
+                     <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{total.toLocaleString()} records • Optimized view</span>
                 </div>
-            )}
-          </div>
+                <div className="overflow-auto flex-1 custom-scrollbar mt-2">
+                    {total === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full space-y-3 pb-12">
+                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
+                                <svg className="w-6 h-6 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            </div>
+                            <span className="text-[10px] text-gray-300 font-black uppercase tracking-[0.2em]">Filtered out all records</span>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm">
+                                <tr>
+                                    {Object.keys(displayData[0]).filter(key => !['geom', 'data', 'isLoading', 'id', 'Dataset'].includes(key)).map(key => (
+                                        <th key={key} className="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 whitespace-nowrap">{key.replace('_', ' ')}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {displayData.map((record: any, i: number) => (
+                                    <tr 
+                                        key={i}
+                                        onClick={() => onRowClick(record)}
+                                        className="hover:bg-blue-50/40 cursor-pointer transition-all border-b border-gray-50 group font-sans"
+                                    >
+                                        {Object.entries(record).filter(([key]) => !['geom', 'data', 'isLoading', 'id', 'Dataset'].includes(key)).map(([_, v]: [any, any], j) => (
+                                            <td key={j} className="px-6 py-4 text-[12px] text-gray-600 font-medium truncate max-w-50 group-hover:text-blue-700 transition-colors">
+                                                {v?.toString() || '-'}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
         )}
-      </div>
       </div>
     </div>
   );

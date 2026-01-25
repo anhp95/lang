@@ -11,6 +11,7 @@ import DetailWindow from './components/DetailWindow';
 import ChatInterface from './components/ChatInterface';
 import DataTable from './components/DataTable';
 import Catalog from './components/Catalog';
+import LegendPanel from './components/LegendPanel';
 import './App.css';
 
 import { createColorScale } from './utils/ColorMapper';
@@ -30,6 +31,9 @@ interface LayerConfig {
   palette?: string[];
   data?: any[];
   isLoading?: boolean;
+  isSpatial?: boolean;
+  pointSize?: number;
+  stroked?: boolean;
 }
 
 interface DetailWindowData {
@@ -50,6 +54,7 @@ function App() {
   const [layers, setLayers] = useState<LayerConfig[]>([]);
   const [detailWindows, setDetailWindows] = useState<DetailWindowData[]>([]);
   const [scales, setScales] = useState<Record<string, any>>({});
+  const [schema, setSchema] = useState<Record<string, any[]>>({});
   const [viewState, setViewState] = useState({
     longitude: 0,
     latitude: 20,
@@ -57,7 +62,7 @@ function App() {
     pitch: 0,
     bearing: 0
   });
-  const [showDataTable, setShowDataTable] = useState(false);
+  const [openTableLayerIds, setOpenTableLayerIds] = useState<string[]>([]);
   const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [windowPositions, setWindowPositions] = useState<Record<string, {x: number, y: number, w: number, h: number}>>({});
@@ -94,7 +99,14 @@ function App() {
                         // Use toArray() and map to plain objects
                         const data = table.toArray().map((row: any) => {
                             const obj: any = {};
-                            fields.forEach(f => { obj[f] = row[f]; });
+                            fields.forEach(f => { 
+                                let val = row[f];
+                                // Convert BigInt to Number for Deck.gl/D3 compatibility
+                                if (typeof val === 'bigint') {
+                                    val = Number(val);
+                                }
+                                obj[f] = val; 
+                            });
                             return obj;
                         });
                         
@@ -104,7 +116,8 @@ function App() {
                         if (l.vizField && l.palette && data.length > 0) {
                             const values = data.map((d: any) => d[l.vizField!]).filter((v: any) => v != null);
                             if (values.length > 0) {
-                                const isNum = !isNaN(parseFloat(values[0])) && isFinite(values[0]);
+                                const firstVal = values[0];
+                                const isNum = typeof firstVal === 'number' || (typeof firstVal === 'string' && !isNaN(parseFloat(firstVal)) && isFinite(Number(firstVal)));
                                 const scale = createColorScale(isNum ? 'numerical' : 'categorical', values, l.palette!);
                                 setScales(prev => ({ ...prev, [l.id]: scale }));
                             }
@@ -121,13 +134,42 @@ function App() {
         } else if (l.visible && l.data && l.vizField && l.palette && !scales[l.id]) {
             const values = l.data.map((d: any) => d[l.vizField!]).filter((v: any) => v != null);
             if (values.length > 0) {
-                const isNum = !isNaN(parseFloat(values[0])) && isFinite(values[0]);
+                const firstVal = values[0];
+                const isNum = typeof firstVal === 'number' || (typeof firstVal === 'string' && !isNaN(parseFloat(firstVal)) && isFinite(Number(firstVal)));
                 const scale = createColorScale(isNum ? 'numerical' : 'categorical', values, l.palette!);
                 setScales(prev => ({ ...prev, [l.id]: scale }));
             }
         }
     });
   }, [layers.map(l => `${l.id}-${l.visible}-${l.vizField}-${l.palette?.join(',')}-${!!l.data}`).join('|')]);
+
+  // Sync Schema
+  useEffect(() => {
+    layers.forEach(l => {
+        if (!schema[l.id]) {
+            if (l.type.startsWith('user_upload') && l.data && l.data.length > 0) {
+                // Infer schema from user data
+                const firstRow = l.data[0];
+                const cols = Object.keys(firstRow).map(name => {
+                    const val = firstRow[name];
+                    const type = (typeof val === 'number' || typeof val === 'bigint') ? 'DOUBLE' : 'VARCHAR';
+                    return { name, type };
+                });
+                setSchema(prev => ({ ...prev, [l.id]: cols }));
+            } else if (l.dataset) {
+                fetch(`http://localhost:8000/api/v1/schema?data_type=${l.type}&dataset=${l.dataset}`)
+                    .then(res => {
+                        if (!res.ok) return null;
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data) setSchema(prev => ({ ...prev, [l.id]: data.columns }));
+                    })
+                    .catch(() => {});
+            }
+        }
+    });
+  }, [layers]);
 
   const handleUploadData = (data: any[], name: string, coords: {lat: string, lon: string}, fileType: string) => {
     const id = `upload_${name}_${Date.now()}`;
@@ -150,7 +192,9 @@ function App() {
           coords_lat: coords.lat || 'latitude'
       },
       data,
-      vizField: undefined
+      vizField: undefined,
+      isSpatial: !!(coords.lat && coords.lon),
+      pointSize: 8
     };
     
     setLayers(prev => [...prev, newLayer]);
@@ -170,7 +214,9 @@ function App() {
       visible: true,
       opacity: 0.8,
       color: randomColors[Math.floor(Math.random() * randomColors.length)],
-      filters: {}
+      filters: {},
+      isSpatial: true, // Internal datasets are assumed spatial
+      pointSize: 6
     };
     setLayers(prev => [...prev, newLayer]);
     setIsCatalogOpen(false);
@@ -178,9 +224,9 @@ function App() {
 
   const handleRemoveLayer = (layerId: string) => {
     setLayers(prev => prev.filter(l => l.id !== layerId));
+    setOpenTableLayerIds(prev => prev.filter(id => id !== layerId));
     if (activeTableLayerId === layerId) {
         setActiveTableLayerId(null);
-        setShowDataTable(false);
     }
   };
 
@@ -199,6 +245,18 @@ function App() {
   const handleLayerColor = (layerId: string, color: [number, number, number]) => {
     setLayers(prev => prev.map(layer => 
       layer.id === layerId ? { ...layer, color } : layer
+    ));
+  };
+
+  const handlePointSizeChange = (layerId: string, pointSize: number) => {
+    setLayers(prev => prev.map(layer => 
+      layer.id === layerId ? { ...layer, pointSize } : layer
+    ));
+  };
+
+  const handleStrokedChange = (layerId: string, stroked: boolean) => {
+    setLayers(prev => prev.map(layer => 
+      layer.id === layerId ? { ...layer, stroked } : layer
     ));
   };
 
@@ -225,13 +283,11 @@ function App() {
   };
 
   const handleOpenTable = (layerId: string) => {
-    if (activeTableLayerId === layerId && showDataTable) {
-        setShowDataTable(false);
-        setActiveTableLayerId(null);
-    } else {
-        setActiveTableLayerId(layerId);
-        setShowDataTable(true);
-    }
+    setOpenTableLayerIds(prev => {
+        if (prev.includes(layerId)) return prev;
+        return [...prev, layerId];
+    });
+    setActiveTableLayerId(layerId);
   };
 
   const handleMapClick = useCallback((info: any) => {
@@ -323,7 +379,7 @@ function App() {
             }
           })
         );
-      } else if (l.data) {
+      } else if (l.data && l.isSpatial) {
         const scale = scales[l.id];
         const filteredData = l.data.filter(d => {
             if (l.filters?.search) {
@@ -342,10 +398,10 @@ function App() {
           data: filteredData,
           pickable: true,
           opacity: l.opacity,
-          stroked: true,
+          stroked: l.stroked ?? true,
           filled: true,
           radiusScale: 1,
-          radiusMinPixels: 6,
+          radiusMinPixels: l.pointSize || 6,
           radiusMaxPixels: 100,
           lineWidthMinPixels: 1,
           getPosition: d => {
@@ -415,8 +471,13 @@ function App() {
         onFilterChange={handleFilterChange}
         onOpenTable={handleOpenTable}
         onVizChange={handleVizChange}
+        onPointSizeChange={handlePointSizeChange}
+        onStrokedChange={handleStrokedChange}
         activeTableLayerId={activeTableLayerId || undefined}
+        schema={schema}
       />
+
+      <LegendPanel layers={layers} schema={schema} />
 
       <div className="absolute top-[88vh] left-4 z-50">
          <button onClick={toggle3D} className="group relative flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-2xl hover:bg-gray-100 transition-all border border-gray-100" title="Toggle 2D/3D View">
@@ -424,8 +485,21 @@ function App() {
           </button>
       </div>
 
-      {showDataTable && activeTableLayerId && (
-        <DataTable layer={layers.find(l => l.id === activeTableLayerId)} onRowClick={handleTableRowClick} onClose={() => { setShowDataTable(false); setActiveTableLayerId(null); }} />
+      {openTableLayerIds.length > 0 && (
+        <DataTable 
+            layers={layers.filter(l => openTableLayerIds.includes(l.id))} 
+            activeLayerId={activeTableLayerId || openTableLayerIds[0]}
+            onRowClick={handleTableRowClick} 
+            onTabChange={(id) => setActiveTableLayerId(id)}
+            onCloseTab={(id) => {
+                setOpenTableLayerIds(prev => prev.filter(tid => tid !== id));
+                if (activeTableLayerId === id) setActiveTableLayerId(null);
+            }}
+            onCloseAll={() => {
+                setOpenTableLayerIds([]);
+                setActiveTableLayerId(null);
+            }} 
+        />
       )}
 
       {isCatalogOpen && (
