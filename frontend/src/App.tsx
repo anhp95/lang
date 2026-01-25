@@ -129,6 +129,34 @@ function App() {
     });
   }, [layers.map(l => `${l.id}-${l.visible}-${l.vizField}-${l.palette?.join(',')}-${!!l.data}`).join('|')]);
 
+  const handleUploadData = (data: any[], name: string, coords: {lat: string, lon: string}, fileType: string) => {
+    const id = `upload_${name}_${Date.now()}`;
+    const randomColors: [number, number, number][] = [
+        [255, 120, 0], [0, 200, 100], [0, 120, 255], [255, 50, 50], [150, 0, 150]
+    ];
+    
+    // Create layer with in-memory data
+    const newLayer: LayerConfig = {
+      id,
+      name,
+      type: `user_upload_${fileType}`,
+      dataset: name,
+      visible: true,
+      opacity: 0.9,
+      color: randomColors[Math.floor(Math.random() * randomColors.length)],
+      filters: { 
+          // Inject detected coordinate keys for consistent access
+          coords_lon: coords.lon || 'longitude',
+          coords_lat: coords.lat || 'latitude'
+      },
+      data,
+      vizField: undefined
+    };
+    
+    setLayers(prev => [...prev, newLayer]);
+    setIsCatalogOpen(false);
+  };
+
   const handleAddDataset = (dataType: string, dataset: string) => {
     const id = `${dataType}_${dataset}_${Date.now()}`;
     const randomColors: [number, number, number][] = [
@@ -320,10 +348,16 @@ function App() {
           radiusMinPixels: 6,
           radiusMaxPixels: 100,
           lineWidthMinPixels: 1,
-          getPosition: d => [
-            parseFloat(d.Longitude || d.longitude || d.Lon || d.lon || 0),
-            parseFloat(d.Latitude || d.latitude || d.Lat || d.lat || 0)
-          ],
+          getPosition: d => {
+              // Priority 1: User upload detected coordinates
+              if (l.filters?.coords_lon && l.filters?.coords_lat) {
+                  return [parseFloat(d[l.filters.coords_lon] || 0), parseFloat(d[l.filters.coords_lat] || 0)];
+              }
+              // Priority 2: Standard naming patterns
+              const lon = d.Longitude || d.longitude || d.Lon || d.lon || d.lng || d.Lng || d.x || d.X || 0;
+              const lat = d.Latitude || d.latitude || d.Lat || d.lat || d.y || d.Y || 0;
+              return [parseFloat(lon), parseFloat(lat)];
+          },
           getFillColor: d => scale && l.vizField ? scale(d[l.vizField]) : l.color,
           getLineColor: [255, 255, 255, 150],
           onClick: handleMapClick,
@@ -395,7 +429,7 @@ function App() {
       )}
 
       {isCatalogOpen && (
-        <Catalog onAddDataset={handleAddDataset} onClose={() => setIsCatalogOpen(false)} />
+        <Catalog onAddDataset={handleAddDataset} onUploadData={handleUploadData} onClose={() => setIsCatalogOpen(false)} />
       )}
 
       {detailWindows.map(window => {

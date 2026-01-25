@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import init_db
-from app.api import tiles, chat, data, raster
+from app.api import tiles, chat, data, raster, upload
 
 app = FastAPI(title="Research Platform Backend")
 
@@ -24,6 +24,7 @@ app.include_router(data.router, prefix="/api/v1")
 app.include_router(
     raster.raster_router.router, prefix="/api/v1/raster", tags=["Raster"]
 )
+app.include_router(upload.router, prefix="/api/v1")
 
 
 @app.on_event("startup")

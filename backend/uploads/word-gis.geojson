@@ -1,0 +1,1205 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    106.18999999999999772626324556767940521240234375,
+                    24.85000000000000142108547152020037174224853515625
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Dioi",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Dioi"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "kia³",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ ka₁",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ san⁴",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ chouk₁",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ om₃",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ chout₁",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "haou₃ chiem⁴",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "non-glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    108.0199999999999960209606797434389591217041015625,
+                    25.019999999999999573674358543939888477325439453125
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Maonan",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Maonan"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "ɦu24 ja44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "ɦu24",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əm51/u44 əm51",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "ceŋ42",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    107.7300000000000039790393202565610408782958984375,
+                    25.589999999999999857891452847979962825775146484375
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Mak",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Mak"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "tji44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "həu44 kaak",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "həu44 saan13",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "həu44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "həu44 ɗaai24",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "həu44 siim24",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "non-glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    107.31000000000000227373675443232059478759765625,
+                    25.6700000000000017053025658242404460906982421875
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Then",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Then"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "kjaa22",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "xau31 kuek22",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "xau31 thaan13",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "xau31",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "xau31 tiu22",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "xay31 tsjaam44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "non-glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    106.159999999999996589394868351519107818603515625,
+                    26.160000000000000142108547152020037174224853515625
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Kelao",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Kelao"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "peu eull",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "pứ plố chí",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mô",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "bnɔ44 phu35 ci35",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "/ci35",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "ci35",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mo44 kɔ44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mo44 cy44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "plɤ ci35 lɤ44",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "plɤ kɔ35 kɔ35",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "non-glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mpəɯ13 tsau33/mpa55",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mpəɯ13 su33",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mpəɯ13",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mpəɯ13 taŋ24",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    109.5499999999999971578290569595992565155029296875,
+                    26.219999999999998863131622783839702606201171875
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Kam",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Kam"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "kaa323",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31 ok323",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "eŋ55",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31 tjo323",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31 tjim55",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "non-glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "ȶaa323",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31 saan35",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "əu31",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    },
+                    {
+                        "language": {
+                            "Language 1": "Kam-Sui",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Kam-Sui"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "gas",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "oux",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    107.2399999999999948840923025272786617279052734375,
+                    26.57000000000000028421709430404007434844970703125
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Mulao",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Mulao"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "kɤa53",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "hu53 kɔk55",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "hu53 taan24",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "hu53",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "tsɔk55",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    112.938999999999992951416061259806156158447265625,
+                    28.22800000000000153477230924181640148162841796875
+                ]
+            },
+            "properties": {
+                "sites": [
+                    {
+                        "language": {
+                            "Language 1": "Chang-sha",
+                            "Language 2": null,
+                            "Language 3": null
+                        },
+                        "source": {
+                            "Source": "Le riz en asie du sud-est: Atlas du vocabulaire de la plante",
+                            "Source abbr": "Revel 1988"
+                        },
+                        "site": {
+                            "Data Collection Site": "Changsha"
+                        },
+                        "words": [
+                            {
+                                "form": {
+                                    "Form: Latin": "yānɡ",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice plant",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "o¹³/ku²⁴",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "unhusked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "mi⁴¹",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "husked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "fan²¹",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "cooked rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "ꞔi³³ fan²¹",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "rice soup",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            },
+                            {
+                                "form": {
+                                    "Form: Latin": "lo²¹ mi⁴¹",
+                                    "Form: Phonemic": null,
+                                    "Form: IPA": null,
+                                    "Form: Other": null
+                                },
+                                "definition": {
+                                    "Definition (Eng)": "glutinous rice",
+                                    "Definition 2": null,
+                                    "Definition 3": null,
+                                    "concept": [],
+                                    "scientific": []
+                                },
+                                "word_class": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

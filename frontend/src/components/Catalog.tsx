@@ -2,15 +2,66 @@ import React, { useState, useEffect } from 'react';
 
 interface CatalogProps {
   onAddDataset: (dataType: string, dataset: string) => void;
+  onUploadData: (data: any, name: string, coords: {lat: string, lon: string}, type: string) => void;
   onClose: () => void;
 }
 
-const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onClose }) => {
+const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }) => {
   const [catalog, setCatalog] = useState<Record<string, Array<{name: string, count: number}>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Client-side size limit (50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 50MB.`);
+        return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percent * 0.9); // Reserve last 10% for backend processing
+        }
+    });
+
+    xhr.onload = () => {
+        setIsUploading(false);
+        setUploadProgress(100);
+        if (xhr.status >= 200 && xhr.status < 300) {
+            const result = JSON.parse(xhr.responseText);
+            onUploadData(result.data, result.name, result.coordinates, result.type);
+        } else {
+            const err = JSON.parse(xhr.responseText || '{"detail":"Upload failed"}');
+            setError(err.detail || 'Upload failed');
+        }
+    };
+
+    xhr.onerror = () => {
+        setIsUploading(false);
+        setError('Network error during upload');
+    };
+
+    xhr.open('POST', 'http://localhost:8000/api/v1/upload');
+    xhr.send(formData);
+  };
 
   useEffect(() => {
     fetch('http://localhost:8000/api/v1/catalog')
@@ -105,6 +156,39 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onClose }) => {
                 <option value="archaeology">🏺 Archaeology</option>
                 <option value="genetics">🧬 Genetics</option>
             </select>
+        </div>
+        
+        {/* Upload Section */}
+        <div className="px-6 py-4 bg-blue-50/50 border-b">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a1 1 0 001 1h14a1 1 0 001-1v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 className="text-[13px] font-black text-blue-900">Upload Your Data</h3>
+                        <p className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">CSV or GeoJSON supported • Max 50MB</p>
+                    </div>
+                </div>
+                <label className={`
+                    px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-sm
+                    ${isUploading ? 'bg-gray-200 text-gray-400 cursor-wait' : 'bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100'}
+                `}>
+                    {isUploading ? `${Math.round(uploadProgress)}%` : 'Choose File'}
+                    <input type="file" className="hidden" accept=".csv,.geojson,.json" onChange={handleFileChange} disabled={isUploading} />
+                </label>
+            </div>
+            
+            {isUploading && (
+                <div className="mt-3 w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+                    <div 
+                        className="bg-blue-600 h-full transition-all duration-300 ease-out" 
+                        style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                </div>
+            )}
         </div>
         
         <div className="flex-1 overflow-auto p-6 space-y-8 custom-scrollbar">
