@@ -28,12 +28,27 @@ interface LegendPanelProps {
 const LegendPanel: React.FC<LegendPanelProps> = ({ layers, schema }) => {
   const [isOpen, setIsOpen] = useState(true);
 
-  const activeLegendLayers = layers.filter(l => l.visible && l.vizField && l.palette && l.data);
+  const activeLegendLayers = layers.filter(l => l.visible && l.data && l.data.length > 0);
 
   if (activeLegendLayers.length === 0) return null;
 
   const renderLegend = (layer: LayerConfig) => {
-    if (!layer.vizField || !layer.palette || !layer.data) return null;
+    // Single Color Legend
+    if (!layer.vizField || !layer.palette) {
+        return (
+            <div key={layer.id} className="p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/20 shadow-sm space-y-2">
+                <div className="flex justify-between items-center bg-gray-900/5 px-2 py-1 rounded">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{layer.dataset}</span>
+                    <span className="text-[9px] font-bold text-gray-400">Single Color</span>
+                </div>
+                <div className="flex items-center space-x-2 px-1">
+                    <div className="w-3 h-3 rounded-full shadow-sm border border-black/10" style={{backgroundColor: `rgb(${layer.color[0]}, ${layer.color[1]}, ${layer.color[2]})`}} />
+                    <span className="text-[10px] text-gray-600 font-medium">All Markers</span>
+                    <span className="text-[9px] text-gray-400 font-mono ml-auto">{layer.data?.length?.toLocaleString() || 0} pts</span>
+                </div>
+            </div>
+        );
+    }
     
     const layerSchema = schema[layer.id] || [];
     const field = layerSchema.find(f => f.name === layer.vizField);
@@ -58,11 +73,11 @@ const LegendPanel: React.FC<LegendPanelProps> = ({ layers, schema }) => {
         );
     } else {
         const counts: Record<string, number> = {};
-        layer.data.forEach(d => {
+        (layer.data || []).forEach(d => {
             const val = String(d[layer.vizField!] || 'Unknown');
             counts[val] = (counts[val] || 0) + 1;
         });
-        const sortedCats = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        const sortedCats = Object.entries(counts).sort((a, b) => b[1] - a[1]);
         
         return (
             <div key={layer.id} className="p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/20 shadow-sm space-y-2">
@@ -70,7 +85,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({ layers, schema }) => {
                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{layer.dataset}</span>
                     <span className="text-[9px] font-bold text-blue-600 truncate max-w-32">{layer.vizField}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                     {sortedCats.map(([cat, count], i) => {
                         const color = layer.palette![i % layer.palette!.length];
                         return (
@@ -84,9 +99,6 @@ const LegendPanel: React.FC<LegendPanelProps> = ({ layers, schema }) => {
                         );
                     })}
                 </div>
-                {Object.keys(counts).length > 6 && (
-                    <p className="text-[8px] text-gray-400 italic text-center pt-1 border-t border-dashed border-gray-200">+ {Object.keys(counts).length - 6} more categories</p>
-                )}
             </div>
         );
     }
@@ -94,7 +106,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({ layers, schema }) => {
 
   return (
     <div className={`absolute right-4 bottom-24 z-40 transition-all duration-300 ease-in-out ${isOpen ? 'w-72' : 'w-12'}`}>
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 overflow-hidden flex flex-col max-h-[50vh]">
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 overflow-hidden flex flex-col max-h-[60vh]">
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className={`p-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors ${isOpen ? 'border-b border-gray-100' : 'h-12 w-12 justify-center'}`}

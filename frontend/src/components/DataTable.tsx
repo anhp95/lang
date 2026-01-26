@@ -37,7 +37,7 @@ const DataTable: React.FC<DataTableProps> = ({ layers, activeLayerId, onRowClick
 
   return (
     <div 
-        className={`fixed z-30 transition-all duration-500 ease-in-out ${isMinimized ? 'bottom-4 left-88 h-12 w-64' : 'bottom-6 left-88 right-6 h-[45vh]'}`}
+        className={`fixed z-30 transition-all duration-500 ease-in-out ${isMinimized ? 'bottom-4 left-88 h-12 w-64' : 'bottom-6 left-88 right-96 h-[45vh]'}`}
     >
       <div className="w-full h-full bg-white shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] rounded-2xl border border-gray-100 flex flex-col overflow-hidden">
         {/* Tab Bar */}

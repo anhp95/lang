@@ -110,8 +110,12 @@ function App() {
                             return obj;
                         });
                         
+                        // Check for spatial columns
+                        const spatialKeys = ['Longitude', 'Latitude', 'longitude', 'latitude', 'Lon', 'Lat', 'lon', 'lat', 'lng', 'Lng', 'x', 'X', 'y', 'Y'];
+                        const hasSpatialCols = fields.some(f => spatialKeys.includes(f));
+
                         console.log(`[Arrow] Direct parse success: ${data.length} rows for ${l.dataset}`);
-                        setLayers(prev => prev.map(layer => layer.id === l.id ? { ...layer, data, isLoading: false } : layer));
+                        setLayers(prev => prev.map(layer => layer.id === l.id ? { ...layer, data, isLoading: false, isSpatial: hasSpatialCols } : layer));
                         
                         if (l.vizField && l.palette && data.length > 0) {
                             const values = data.map((d: any) => d[l.vizField!]).filter((v: any) => v != null);

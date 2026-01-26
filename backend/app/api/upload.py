@@ -131,15 +131,24 @@ async def upload_file(file: UploadFile = File(...)):
                 with open(file_path, "r", encoding="latin1") as f:
                     geojson = json.load(f)
 
-            # Handle GeoJSON structures
-            if geojson.get("type") == "FeatureCollection":
+            # Handle standard list of records or FeatureCollection
+            if isinstance(geojson, list):
+                # Standard JSON array of objects
+                data = geojson
+                if len(data) > 0:
+                    keys = list(data[0].keys())
+                    detected = detect_coordinates(keys)
+                else:
+                    detected = {"lat": None, "lon": None}
+
+            elif geojson.get("type") == "FeatureCollection":
                 features = geojson.get("features", [])
                 for feat in features:
                     props = feat.get("properties", {})
                     geom = feat.get("geometry", {})
 
                     # Extract coords if point
-                    if geom.get("type") == "Point":
+                    if geom and geom.get("type") == "Point":
                         coords = geom.get("coordinates", [])
                         if len(coords) >= 2:
                             props["longitude"] = coords[0]
@@ -147,11 +156,22 @@ async def upload_file(file: UploadFile = File(...)):
 
                     data.append(props)
 
+                # For GeoJSON, we explicitly know we added these keys if they existed as Points
+                detected = {"lat": "latitude", "lon": "longitude"}
+            else:
+                # Try simple key detection on root object if it's a single record (rare but possible)
+                if isinstance(geojson, dict):
+                    data = [geojson]
+                    keys = list(geojson.keys())
+                    detected = detect_coordinates(keys)
+                else:
+                    detected = {"lat": None, "lon": None}
+
             return {
                 "name": file.filename,
                 "data": data,
-                "coordinates": {"lat": "latitude", "lon": "longitude"},
-                "type": "geojson",
+                "coordinates": detected,
+                "type": "json",
             }
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")
