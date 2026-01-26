@@ -30,6 +30,7 @@ interface LayerConfig {
   tooltipFields?: string[];
   palette?: string[];
   data?: any[];
+  filteredData?: any[];
   isLoading?: boolean;
   isSpatial?: boolean;
   pointSize?: number;
@@ -66,6 +67,7 @@ function App() {
   const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [windowPositions, setWindowPositions] = useState<Record<string, {x: number, y: number, w: number, h: number}>>({});
+  const [baseMapStyle, setBaseMapStyle] = useState('mapbox://styles/mapbox/dark-v11');
 
   const viewport = useMemo(() => {
     return new WebMercatorViewport({
@@ -175,12 +177,12 @@ function App() {
     });
   }, [layers]);
 
-  const handleUploadData = (data: any[], name: string, coords: {lat: string, lon: string}, fileType: string) => {
+  const handleUploadData = (data: any[], filteredData: any[], name: string, coords: {lat: string, lon: string}, fileType: string) => {
     const id = `upload_${name}_${Date.now()}`;
     const randomColors: [number, number, number][] = [
         [255, 120, 0], [0, 200, 100], [0, 120, 255], [255, 50, 50], [150, 0, 150]
     ];
-    
+
     // Create layer with in-memory data
     const newLayer: LayerConfig = {
       id,
@@ -190,17 +192,18 @@ function App() {
       visible: true,
       opacity: 0.9,
       color: randomColors[Math.floor(Math.random() * randomColors.length)],
-      filters: { 
+      filters: {
           // Inject detected coordinate keys for consistent access
           coords_lon: coords.lon || 'longitude',
           coords_lat: coords.lat || 'latitude'
       },
       data,
+      filteredData,
       vizField: undefined,
       isSpatial: !!(coords.lat && coords.lon),
       pointSize: 8
     };
-    
+
     setLayers(prev => [...prev, newLayer]);
     setIsCatalogOpen(false);
   };
@@ -358,6 +361,10 @@ function App() {
     }));
   };
 
+  const handleBaseMapChange = (style: string) => {
+    setBaseMapStyle(style);
+  };
+
   const createDeckLayers = () => {
     const deckLayers: any[] = [];
     
@@ -385,7 +392,9 @@ function App() {
         );
       } else if (l.data && l.isSpatial) {
         const scale = scales[l.id];
-        const filteredData = l.data.filter(d => {
+        // Use filteredData (records with valid coordinates) for map visualization
+        const sourceData = l.filteredData || l.data;
+        const filteredData = sourceData.filter(d => {
             if (l.filters?.search) {
                 const search = l.filters.search.toLowerCase();
                 const nameMatch = (d.Name || d.name || '').toLowerCase().includes(search);
@@ -442,7 +451,7 @@ function App() {
       >
         <Map
           mapboxAccessToken={MAPBOX_TOKEN}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle={baseMapStyle}
           projection={{name: 'mercator'}}
         />
         
@@ -479,6 +488,8 @@ function App() {
         onStrokedChange={handleStrokedChange}
         activeTableLayerId={activeTableLayerId || undefined}
         schema={schema}
+        onBaseMapChange={handleBaseMapChange}
+        baseMapStyle={baseMapStyle}
       />
 
       <LegendPanel layers={layers} schema={schema} />

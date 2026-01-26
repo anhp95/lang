@@ -116,9 +116,27 @@ async def upload_file(file: UploadFile = File(...)):
                 for row in df.to_dict(orient="records")
             ]
 
+            # Filter data with valid coordinates for map visualization
+            filtered_data = []
+            if detected["lat"] and detected["lon"]:
+                lat_col = detected["lat"]
+                lon_col = detected["lon"]
+                for record in data:
+                    lat = record.get(lat_col)
+                    lon = record.get(lon_col)
+                    if lat is not None and lon is not None:
+                        try:
+                            lat_float = float(lat)
+                            lon_float = float(lon)
+                            if -90 <= lat_float <= 90 and -180 <= lon_float <= 180:
+                                filtered_data.append(record)
+                        except (ValueError, TypeError):
+                            continue
+
             return {
                 "name": file.filename,
                 "data": data,
+                "filtered_data": filtered_data,
                 "coordinates": detected,
                 "type": "csv",
             }
@@ -167,9 +185,27 @@ async def upload_file(file: UploadFile = File(...)):
                 else:
                     detected = {"lat": None, "lon": None}
 
+            # Filter data with valid coordinates for map visualization
+            filtered_data = []
+            if detected["lat"] and detected["lon"]:
+                lat_col = detected["lat"]
+                lon_col = detected["lon"]
+                for record in data:
+                    lat = record.get(lat_col)
+                    lon = record.get(lon_col)
+                    if lat is not None and lon is not None:
+                        try:
+                            lat_float = float(lat)
+                            lon_float = float(lon)
+                            if -90 <= lat_float <= 90 and -180 <= lon_float <= 180:
+                                filtered_data.append(record)
+                        except (ValueError, TypeError):
+                            continue
+
             return {
                 "name": file.filename,
                 "data": data,
+                "filtered_data": filtered_data,
                 "coordinates": detected,
                 "type": "json",
             }

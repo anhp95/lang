@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { getAllPalettes } from '../utils/ColorMapper';
 
+const getStylePreviewColor = (styleId: string): string => {
+  const colors: Record<string, string> = {
+    dark: '#1a1a2e',
+    light: '#f5f5f5',
+    streets: '#e8e8e8',
+    outdoors: '#d4e4d4',
+    satellite: '#2d2d2d',
+    'satellite-streets': '#3d3d3d'
+  };
+  return colors[styleId] || '#666';
+};
+
 interface LayerConfig {
   id: string;
   name: string;
@@ -21,6 +33,22 @@ interface LayerConfig {
   stroked?: boolean;
 }
 
+interface BaseMapStyle {
+  id: string;
+  name: string;
+  style: string;
+  thumbnail?: string;
+}
+
+const BASEMAP_STYLES: BaseMapStyle[] = [
+  { id: 'dark', name: 'Dark', style: 'mapbox://styles/mapbox/dark-v11' },
+  { id: 'light', name: 'Light', style: 'mapbox://styles/mapbox/light-v11' },
+  { id: 'streets', name: 'Streets', style: 'mapbox://styles/mapbox/streets-v12' },
+  { id: 'outdoors', name: 'Outdoors', style: 'mapbox://styles/mapbox/outdoors-v12' },
+  { id: 'satellite', name: 'Satellite', style: 'mapbox://styles/mapbox/satellite-v9' },
+  { id: 'satellite-streets', name: 'Satellite Streets', style: 'mapbox://styles/mapbox/satellite-streets-v12' },
+];
+
 interface LayerManagerProps {
   layers: LayerConfig[];
   onToggle: (layerId: string) => void;
@@ -35,12 +63,14 @@ interface LayerManagerProps {
   onStrokedChange: (layerId: string, stroked: boolean) => void;
   activeTableLayerId?: string;
   schema: Record<string, any[]>;
+  onBaseMapChange: (style: string) => void;
+  baseMapStyle: string;
 }
 
-const LayerManager: React.FC<LayerManagerProps> = ({ 
-  layers, 
-  onToggle, 
-  onOpacityChange, 
+const LayerManager: React.FC<LayerManagerProps> = ({
+  layers,
+  onToggle,
+  onOpacityChange,
   onColorChange,
   onRemove,
   onOpenCatalog,
@@ -50,11 +80,14 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   onPointSizeChange,
   onStrokedChange,
   activeTableLayerId,
-  schema
+  schema,
+  onBaseMapChange,
+  baseMapStyle
 }) => {
   const [expandedFilters, setExpandedFilters] = useState<string | null>(null);
   const [openPaletteId, setOpenPaletteId] = useState<string | null>(null);
   const allPalettes = getAllPalettes();
+  const selectedStyle = BASEMAP_STYLES.find(s => s.style === baseMapStyle) || BASEMAP_STYLES[0];
 
   const toggleFilters = (id: string) => {
     setExpandedFilters(expandedFilters === id ? null : id);
@@ -74,7 +107,42 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           + Add Data
         </button>
       </div>
-      
+
+      {/* Base Map Selector */}
+      <div className="px-3 py-2 border-b bg-gray-50/50">
+        <div className="flex items-center justify-between">
+          <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Base Map</label>
+          <div className="relative">
+            <select
+              value={baseMapStyle}
+              onChange={(e) => onBaseMapChange(e.target.value)}
+              className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-[11px] font-medium text-gray-700 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer transition-all"
+            >
+              {BASEMAP_STYLES.map(style => (
+                <option key={style.id} value={style.style}>{style.name}</option>
+              ))}
+            </select>
+            <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        <div className="mt-1.5 grid grid-cols-6 gap-1">
+          {BASEMAP_STYLES.map(style => (
+            <button
+              key={style.id}
+              onClick={() => onBaseMapChange(style.style)}
+              className={`h-6 rounded-md transition-all ${baseMapStyle === style.style ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1'}`}
+              style={{
+                backgroundColor: getStylePreviewColor(style.id),
+                border: style.id === 'light' || style.id === 'streets' ? '1px solid #e5e7eb' : 'none'
+              }}
+              title={style.name}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-auto p-3 space-y-3 custom-scrollbar">
         {layers.length === 0 && (
           <div className="text-center py-10">

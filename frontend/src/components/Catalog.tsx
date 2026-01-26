@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 interface CatalogProps {
   onAddDataset: (dataType: string, dataset: string) => void;
-  onUploadData: (data: any, name: string, coords: {lat: string, lon: string}, type: string) => void;
+  onUploadData: (data: any, filteredData: any, name: string, coords: {lat: string, lon: string}, type: string) => void;
   onClose: () => void;
 }
 
@@ -47,7 +47,7 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }
         setUploadProgress(100);
         if (xhr.status >= 200 && xhr.status < 300) {
             const result = JSON.parse(xhr.responseText);
-            onUploadData(result.data, result.name, result.coordinates, result.type);
+            onUploadData(result.data, result.filtered_data || result.data, result.name, result.coordinates, result.type);
         } else {
             const err = JSON.parse(xhr.responseText || '{"detail":"Upload failed"}');
             setError(err.detail || 'Upload failed');
