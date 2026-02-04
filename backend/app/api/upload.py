@@ -17,8 +17,10 @@ LAT_PATTERNS = [
     r"lat[._\s-]",
     r"lat$",
     r"^lat",
+    r"^y$",  # Exact match for Y
     r"\by\b",
     r"coord.*y",
+    r"point[._\s-]?y",  # Matches point_y, point.y, pointy
     r"north",
 ]
 LON_PATTERNS = [
@@ -31,8 +33,10 @@ LON_PATTERNS = [
     r"^lon",
     r"lng$",
     r"^lng",
+    r"^x$",  # Exact match for X
     r"\bx\b",
     r"coord.*x",
+    r"point[._\s-]?x",  # Matches point_x, point.x, pointx
     r"east",
 ]
 

@@ -299,6 +299,18 @@ function App() {
 
   const handleMapClick = useCallback((info: any) => {
     if (info.object) {
+      const layer = layers.find(l => l.id === info.layer.id);
+      let lon = 0;
+      let lat = 0;
+
+      if (layer && layer.filters?.coords_lon && layer.filters?.coords_lat) {
+          lon = parseFloat(info.object[layer.filters.coords_lon] || 0);
+          lat = parseFloat(info.object[layer.filters.coords_lat] || 0);
+      } else {
+          lon = parseFloat(info.object.Longitude || info.object.longitude || info.object.Lon || info.object.lon || info.object.lng || info.object.Lng || info.object.x || info.object.X || 0);
+          lat = parseFloat(info.object.Latitude || info.object.latitude || info.object.Lat || info.object.lat || info.object.y || info.object.Y || 0);
+      }
+
       const newWindow: DetailWindowData = {
         id: `window-${Date.now()}`,
         x: Math.random() * (window.innerWidth - 450) + 50,
@@ -307,8 +319,8 @@ function App() {
         height: 300,
         data: info.object,
         layerId: info.layer.id,
-        lon: parseFloat(info.object.Longitude || info.object.longitude || info.object.Lon || info.object.lon || 0),
-        lat: parseFloat(info.object.Latitude || info.object.latitude || info.object.Lat || info.object.lat || 0)
+        lon,
+        lat
       };
       setDetailWindows(prev => [...prev, newWindow]);
       setWindowPositions(prev => ({ 
@@ -316,7 +328,7 @@ function App() {
         [newWindow.id]: { x: newWindow.x, y: newWindow.y, w: newWindow.width, h: newWindow.height } 
       }));
     }
-  }, []);
+  }, [layers]);
 
   const handleCloseWindow = (windowId: string) => {
     setDetailWindows(prev => prev.filter(w => w.id !== windowId));
@@ -548,6 +560,8 @@ function App() {
               datasetName={layer?.dataset}
               displayField={layer?.displayField}
               tooltipFields={layer?.tooltipFields}
+              lat={window.lat}
+              lon={window.lon}
               onClose={() => {
                 handleCloseWindow(window.id);
                 setWindowPositions(prev => {

@@ -6,9 +6,11 @@ interface DetailWindowProps {
   displayField?: string;
   datasetName?: string;
   tooltipFields?: string[];
+  lat?: number;
+  lon?: number;
 }
 
-const DetailWindow: React.FC<DetailWindowProps> = ({ data, onClose, displayField, datasetName, tooltipFields }) => {
+const DetailWindow: React.FC<DetailWindowProps> = ({ data, onClose, displayField, datasetName, tooltipFields, lat, lon }) => {
   if (!data) return null;
 
   // Header resolution: Priority is displayField -> Name -> ID -> 'Details'
@@ -115,8 +117,8 @@ const DetailWindow: React.FC<DetailWindowProps> = ({ data, onClose, displayField
 
             {/* Coordinates Footer */}
             <div className="pt-4 mt-2 border-t border-dashed border-gray-100 flex justify-between items-center text-[10px] text-gray-400 font-mono">
-                <span>COORD: {data.Latitude || data.lat || '0'}°</span>
-                <span>{data.Longitude || data.lon || '0'}°</span>
+                <span>COORD: {lat !== undefined ? lat.toFixed(5) : (data.Latitude || data.lat || '0')}°</span>
+                <span>{lon !== undefined ? lon.toFixed(5) : (data.Longitude || data.lon || '0')}°</span>
             </div>
         </div>
       </div>
