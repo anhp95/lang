@@ -87,7 +87,6 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   const [expandedFilters, setExpandedFilters] = useState<string | null>(null);
   const [openPaletteId, setOpenPaletteId] = useState<string | null>(null);
   const allPalettes = getAllPalettes();
-  const selectedStyle = BASEMAP_STYLES.find(s => s.style === baseMapStyle) || BASEMAP_STYLES[0];
 
   const toggleFilters = (id: string) => {
     setExpandedFilters(expandedFilters === id ? null : id);
@@ -186,7 +185,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
                     </div>
                  </div>
 
-                 <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => onOpenTable(layer.id)}
                       className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${activeTableLayerId === layer.id ? 'text-blue-600 bg-blue-50' : 'text-gray-400'}`}

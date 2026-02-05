@@ -88,9 +88,13 @@ function App() {
                 dataset: l.dataset
             });
             
+            if (l.filters?.glosses && Array.isArray(l.filters.glosses)) {
+                l.filters.glosses.forEach((g: string) => params.append('glosses', g));
+            }
+            
             const url = `http://localhost:8000/api/v1/arrow_data?${params}`;
             
-            console.log(`[Arrow] Fetching binary stream for ${l.dataset}...`);
+            console.log(`[Arrow] Fetching binary stream for ${l.dataset} with glosses: ${l.filters?.glosses || 'none'}...`);
             fetch(url)
                 .then(res => res.arrayBuffer())
                 .then(buffer => {
@@ -208,7 +212,7 @@ function App() {
     setIsCatalogOpen(false);
   };
 
-  const handleAddDataset = (dataType: string, dataset: string) => {
+  const handleAddDataset = (dataType: string, dataset: string, filters: any = {}) => {
     const id = `${dataType}_${dataset}_${Date.now()}`;
     const randomColors: [number, number, number][] = [
         [255, 120, 0], [0, 200, 100], [0, 120, 255], [255, 50, 50], [150, 0, 150]
@@ -221,7 +225,7 @@ function App() {
       visible: true,
       opacity: 0.8,
       color: randomColors[Math.floor(Math.random() * randomColors.length)],
-      filters: {},
+      filters: filters,
       isSpatial: true, // Internal datasets are assumed spatial
       pointSize: 6
     };

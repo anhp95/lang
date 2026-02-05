@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { downloadCSV, downloadJSON } from '../utils/Exporter';
 
 interface DataTableProps {
   layers: any[];
@@ -10,7 +11,8 @@ interface DataTableProps {
 }
 
 const DataTable: React.FC<DataTableProps> = ({ layers, activeLayerId, onRowClick, onTabChange, onCloseTab, onCloseAll }) => {
-  const [isMinimized, setIsMinimized] = React.useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
 
@@ -90,8 +92,48 @@ const DataTable: React.FC<DataTableProps> = ({ layers, activeLayerId, onRowClick
         {/* Table Content */}
         {!isMinimized && (
             <div className="flex-1 overflow-hidden flex flex-col pt-2 bg-white">
-                <div className="px-6 py-1 flex items-center justify-between">
-                     <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{total.toLocaleString()} records • Optimized view</span>
+                <div className="px-6 py-2 flex items-center justify-between border-b border-gray-50 bg-white/50">
+                     <div className="flex items-center space-x-3">
+                        <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{total.toLocaleString()} records • Optimized view</span>
+                        <div className="h-3 w-px bg-gray-200"></div>
+                        <span className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{activeLayer?.dataset}</span>
+                     </div>
+                     
+                     <div className="relative">
+                        <button 
+                            onClick={() => setIsDownloadOpen(!isDownloadOpen)}
+                            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all border ${isDownloadOpen ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100'}`}
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a1 1 0 001 1h14a1 1 0 001-1v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span className="text-[10px] font-black uppercase tracking-wider">Export Data</span>
+                            <svg className={`w-3 h-3 transition-transform ${isDownloadOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {isDownloadOpen && (
+                            <div className="absolute top-full right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl z-60 py-1 min-w-32 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+                                <button 
+                                    onClick={() => {
+                                        downloadCSV(filteredData, activeLayer?.dataset || 'export');
+                                        setIsDownloadOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-between group/btn"
+                                >
+                                    <span>CSV Format</span>
+                                    <svg className="w-3 h-3 text-gray-300 group-hover/btn:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        downloadJSON(filteredData, activeLayer?.dataset || 'export');
+                                        setIsDownloadOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-between group/btn"
+                                >
+                                    <span>JSON Format</span>
+                                    <svg className="w-3 h-3 text-gray-300 group-hover/btn:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                </button>
+                            </div>
+                        )}
+                     </div>
                 </div>
                 <div className="overflow-auto flex-1 custom-scrollbar mt-2">
                     {total === 0 ? (
