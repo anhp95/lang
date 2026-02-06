@@ -65,6 +65,7 @@ interface LayerManagerProps {
   schema: Record<string, any[]>;
   onBaseMapChange: (style: string) => void;
   baseMapStyle: string;
+  mapboxToken?: string;
 }
 
 const LayerManager: React.FC<LayerManagerProps> = ({
@@ -82,18 +83,42 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   activeTableLayerId,
   schema,
   onBaseMapChange,
-  baseMapStyle
+  baseMapStyle,
+  mapboxToken
 }) => {
   const [expandedFilters, setExpandedFilters] = useState<string | null>(null);
   const [openPaletteId, setOpenPaletteId] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const allPalettes = getAllPalettes();
 
   const toggleFilters = (id: string) => {
     setExpandedFilters(expandedFilters === id ? null : id);
   };
 
+  const getThumbnailUrl = (stylePath: string) => {
+    if (!mapboxToken) return null;
+    const parts = stylePath.split('styles/mapbox/');
+    if (parts.length < 2) return null;
+    const styleId = parts[1];
+    return `https://api.mapbox.com/styles/v1/mapbox/${styleId}/static/0,30,1,0,0/120x80?access_token=${mapboxToken}&logo=false&attribution=false`;
+  };
+
   return (
-    <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-80 z-40 flex flex-col max-h-[85vh] border border-gray-200 overflow-hidden">
+    <>
+      {/* Collapse Toggle Button */}
+      <div className={`fixed top-4 z-50 transition-all duration-300 ease-in-out ${isCollapsed ? 'left-4' : 'left-84'}`}>
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="w-8 h-12 bg-white rounded-lg shadow-xl border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition-colors group"
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <svg className={`w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      <div className={`fixed top-4 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-80 z-40 flex flex-col max-h-[85vh] border border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? '-left-84' : 'left-4'}`}>
       <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
         <div>
             <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest">Workspace</h3>
@@ -109,36 +134,35 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 
       {/* Base Map Selector */}
       <div className="px-3 py-2 border-b bg-gray-50/50">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Base Map</label>
-          <div className="relative">
-            <select
-              value={baseMapStyle}
-              onChange={(e) => onBaseMapChange(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-[11px] font-medium text-gray-700 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer transition-all"
-            >
-              {BASEMAP_STYLES.map(style => (
-                <option key={style.id} value={style.style}>{style.name}</option>
-              ))}
-            </select>
-            <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+          <span className="text-[10px] font-bold text-blue-600 uppercase">
+            {BASEMAP_STYLES.find(s => s.style === baseMapStyle)?.name || 'Custom'}
+          </span>
         </div>
-        <div className="mt-1.5 grid grid-cols-6 gap-1">
-          {BASEMAP_STYLES.map(style => (
-            <button
-              key={style.id}
-              onClick={() => onBaseMapChange(style.style)}
-              className={`h-6 rounded-md transition-all ${baseMapStyle === style.style ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1'}`}
-              style={{
-                backgroundColor: getStylePreviewColor(style.id),
-                border: style.id === 'light' || style.id === 'streets' ? '1px solid #e5e7eb' : 'none'
-              }}
-              title={style.name}
-            />
-          ))}
+        <div className="grid grid-cols-3 gap-2">
+          {BASEMAP_STYLES.map(style => {
+            const thumb = getThumbnailUrl(style.style);
+            const isActive = baseMapStyle === style.style;
+            return (
+              <button
+                key={style.id}
+                onClick={() => onBaseMapChange(style.style)}
+                className={`relative group rounded-lg overflow-hidden border-2 transition-all h-14 ${isActive ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-transparent hover:border-gray-300'}`}
+                title={style.name}
+              >
+                {thumb ? (
+                  <img src={thumb} alt={style.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full" style={{ backgroundColor: getStylePreviewColor(style.id) }} />
+                )}
+                <div className={`absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-[2px] py-0.5 px-1 truncate">
+                  <span className="text-[8px] font-black text-white uppercase tracking-tighter">{style.name}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -429,7 +453,8 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           );
         })}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

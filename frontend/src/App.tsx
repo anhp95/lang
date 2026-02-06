@@ -65,6 +65,7 @@ function App() {
   });
   const [openTableLayerIds, setOpenTableLayerIds] = useState<string[]>([]);
   const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
+  const [showTableOverlay, setShowTableOverlay] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [windowPositions, setWindowPositions] = useState<Record<string, {x: number, y: number, w: number, h: number}>>({});
   const [baseMapStyle, setBaseMapStyle] = useState('mapbox://styles/mapbox/dark-v11');
@@ -443,6 +444,7 @@ function App() {
         return [...prev, layerId];
     });
     setActiveTableLayerId(layerId);
+    setShowTableOverlay(true);
   };
 
   const handleMapClick = useCallback((info: any) => {
@@ -650,17 +652,29 @@ function App() {
         schema={schema}
         onBaseMapChange={handleBaseMapChange}
         baseMapStyle={baseMapStyle}
+        mapboxToken={MAPBOX_TOKEN}
       />
 
       <LegendPanel layers={layers} schema={schema} />
 
-      <div className="absolute top-[88vh] left-4 z-50">
+      <div className="absolute top-[88vh] left-4 z-50 flex flex-col space-y-2">
+         {openTableLayerIds.length > 0 && !showTableOverlay && (
+           <button 
+             onClick={() => setShowTableOverlay(true)} 
+             className="group relative flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-2xl hover:bg-blue-50 transition-all border border-blue-100" 
+             title="View Data Table"
+           >
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+           </button>
+         )}
          <button onClick={toggle3D} className="group relative flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-2xl hover:bg-gray-100 transition-all border border-gray-100" title="Toggle 2D/3D View">
             <span className="text-[10px] font-black text-blue-600 transition-transform group-active:scale-90">{viewState.pitch === 0 ? '3D' : '2D'}</span>
           </button>
       </div>
 
-      {openTableLayerIds.length > 0 && (
+      {showTableOverlay && openTableLayerIds.length > 0 && (
         <DataTable 
             layers={layers.filter(l => openTableLayerIds.includes(l.id))} 
             activeLayerId={activeTableLayerId || openTableLayerIds[0]}
@@ -671,8 +685,7 @@ function App() {
                 if (activeTableLayerId === id) setActiveTableLayerId(null);
             }}
             onCloseAll={() => {
-                setOpenTableLayerIds([]);
-                setActiveTableLayerId(null);
+                setShowTableOverlay(false);
             }} 
         />
       )}
