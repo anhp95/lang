@@ -212,6 +212,150 @@ function App() {
     setIsCatalogOpen(false);
   };
 
+  // Handle CSV data from chat interface "Add to Map" button
+  const handleAddCsvToMap = useCallback((csvData: string, layerName: string) => {
+    try {
+      // Robust CSV parser that handles quoted fields
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const nextChar = line[i + 1];
+          
+          if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+              // Escaped quote
+              current += '"';
+              i++;
+            } else {
+              // Toggle quote state
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
+      const lines = csvData.trim().split('\n').filter(l => l.trim());
+      if (lines.length < 2) {
+        console.warn('[App] CSV has less than 2 lines, cannot parse');
+        return;
+      }
+      
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
+      const data: any[] = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = parseCSVLine(lines[i]);
+          // Allow rows with slight column mismatch (within 2 columns)
+          if (Math.abs(values.length - headers.length) <= 2) {
+            const row: any = {};
+            headers.forEach((h, idx) => {
+              let val = values[idx] || '';
+              // Remove surrounding quotes if present
+              val = val.replace(/^"|"$/g, '');
+              // Try to parse as number for coordinate columns
+              if (['Latitude', 'Longitude', 'latitude', 'longitude', 'Lat', 'Lon', 'lat', 'lon', 'x', 'y', 'X', 'Y'].includes(h)) {
+                const num = parseFloat(val);
+                row[h] = !isNaN(num) && isFinite(num) ? num : null;
+              } else {
+                row[h] = val;
+              }
+            });
+            data.push(row);
+          }
+        } catch (lineError) {
+          console.warn(`[App] Skipping malformed CSV line ${i}:`, lineError);
+        }
+      }
+      
+      if (data.length === 0) {
+        console.warn('[App] No valid data rows parsed from CSV');
+        return;
+      }
+      
+      console.log(`[App] Parsed ${data.length} rows from CSV`);
+      
+      // Detect coordinate columns
+      const latKeys = ['Latitude', 'latitude', 'Lat', 'lat', 'y', 'Y'];
+      const lonKeys = ['Longitude', 'longitude', 'Lon', 'lon', 'x', 'X'];
+      const latCol = headers.find(h => latKeys.includes(h)) || '';
+      const lonCol = headers.find(h => lonKeys.includes(h)) || '';
+      
+      // Filter to valid spatial records with reasonable coordinate ranges
+      const filteredData = latCol && lonCol 
+        ? data.filter(d => {
+            const lat = d[latCol];
+            const lon = d[lonCol];
+            return lat != null && lon != null && 
+                   !isNaN(lat) && !isNaN(lon) &&
+                   isFinite(lat) && isFinite(lon) &&
+                   lat >= -90 && lat <= 90 &&
+                   lon >= -180 && lon <= 180;
+          })
+        : data;
+      
+      console.log(`[App] ${filteredData.length} rows have valid coordinates`);
+      
+      const id = `chat_${layerName}_${Date.now()}`;
+      const randomColors: [number, number, number][] = [
+          [255, 120, 0], [0, 200, 100], [0, 120, 255], [255, 50, 50], [150, 0, 150]
+      ];
+
+      const newLayer: LayerConfig = {
+        id,
+        name: layerName,
+        type: 'user_upload_chat',
+        dataset: layerName,
+        visible: true,
+        opacity: 0.9,
+        color: randomColors[Math.floor(Math.random() * randomColors.length)],
+        filters: {
+            coords_lon: lonCol,
+            coords_lat: latCol
+        },
+        data,
+        filteredData,
+        vizField: undefined,
+        isSpatial: !!(latCol && lonCol && filteredData.length > 0),
+        pointSize: 8
+      };
+
+      setLayers(prev => [...prev, newLayer]);
+      
+      // Zoom to data extent if spatial
+      if (filteredData.length > 0 && latCol && lonCol) {
+        const lons = filteredData.map(d => d[lonCol]).filter(v => v != null);
+        const lats = filteredData.map(d => d[latCol]).filter(v => v != null);
+        if (lons.length > 0 && lats.length > 0) {
+          const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2;
+          const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+          setViewState(prev => ({
+            ...prev,
+            longitude: centerLon,
+            latitude: centerLat,
+            zoom: 4,
+            transitionDuration: 1000
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('[App] Failed to parse CSV for map:', e);
+    }
+  }, []);
+
+
+
   const handleAddDataset = (dataType: string, dataset: string, filters: any = {}) => {
     const id = `${dataType}_${dataset}_${Date.now()}`;
     const randomColors: [number, number, number][] = [
@@ -579,7 +723,8 @@ function App() {
         );
       })}
 
-      <ChatInterface />
+      <ChatInterface onAddToMap={handleAddCsvToMap} />
+
     </div>
   );
 }

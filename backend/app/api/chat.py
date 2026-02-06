@@ -1,9 +1,25 @@
+"""
+Chat API - MCP Architecture with Conversational-First Approach
+
+This module implements a chat endpoint that:
+1. Behaves conversationally by default
+2. Uses MCP tools only when explicitly requested
+3. Does not force workflows on users
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import httpx
 import os
 import json
+import time
+
+from app.tools.orchestrator import orchestrator
+from app.mcp.handlers import execute_tool
+from app.mcp.formatters import format_tool_result, get_default_response
+from app.mcp.utils import clean_llm_response
+
 
 router = APIRouter()
 
@@ -22,195 +38,283 @@ class ChatRequest(BaseModel):
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     context: Optional[str] = None
+    session_id: str = "default"
+    uploaded_file: Optional[str] = None  # For CSV uploads
 
 
 class ChatResponse(BaseModel):
     role: str
     content: str
+    tool_data: Optional[Dict[str, Any]] = None
+    thinking_time: Optional[float] = None
+
+
+async def call_llm_with_messages(
+    messages: List[Dict[str, str]],
+    provider: str,
+    model: str,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> str:
+    """
+    Call LLM with a list of messages.
+    """
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        if provider == "ollama":
+            url = base_url or OLLAMA_BASE_URL
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            response = await client.post(
+                f"{url}/api/chat",
+                headers=headers,
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "stream": False,
+                },
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("message", {}).get("content", "")
+            else:
+                raise Exception(f"LLM error: {response.text}")
+
+        elif provider == "openai":
+            if not api_key:
+                raise Exception("OpenAI API key required")
+
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                },
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+            else:
+                raise Exception(
+                    f"OpenAI error ({response.status_code}): {response.text}"
+                )
+
+        elif provider == "anthropic":
+            if not api_key:
+                raise Exception("Anthropic API key required")
+
+            # Basic Anthropic implementation
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [m for m in messages if m["role"] != "system"],
+                    "system": next(
+                        (m["content"] for m in messages if m["role"] == "system"), ""
+                    ),
+                    "max_tokens": 1024,
+                },
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return result["content"][0]["text"]
+            else:
+                raise Exception(
+                    f"Anthropic error ({response.status_code}): {response.text}"
+                )
+
+        elif provider == "gemini":
+            if not api_key:
+                raise Exception("Gemini API key required")
+
+            # Basic Gemini implementation
+            # Note: Gemini messages format is different, this is a simplified version
+            contents = []
+            for m in messages:
+                role = "user" if m["role"] in ["user", "system"] else "model"
+                contents.append({"role": role, "parts": [{"text": m["content"]}]})
+
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                headers={"Content-Type": "application/json"},
+                json={"contents": contents},
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return result["candidates"][0]["content"]["parts"][0]["text"]
+            else:
+                raise Exception(
+                    f"Gemini error ({response.status_code}): {response.text}"
+                )
+
+        else:
+            raise Exception(f"Unsupported provider: {provider}")
+
+
+async def call_llm_simple(
+    prompt: str,
+    provider: str,
+    model: str,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> str:
+    """Simple LLM call with single prompt."""
+    return await call_llm_with_messages(
+        [{"role": "user", "content": prompt}], provider, model, api_key, base_url
+    )
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_llm(request: ChatRequest):
     """
-    Forward chat messages to the selected LLM provider and return response.
+    Conversational-first chat endpoint with optional MCP tool use.
+
+    The assistant behaves conversationally by default and only uses
+    tools when the user explicitly requests them.
     """
-    system_prompt = "You are a research assistant for a platform containing language, archaeology, and genetics data."
-    if request.context:
-        system_prompt += (
-            f" Here is some context about the current data view: {request.context}"
+    start_time = time.time()
+    # Get conversation context
+    context = orchestrator.get_context(request.session_id)
+    print("context", context)
+
+    # Handle file upload - store in context BEFORE processing message
+    if request.uploaded_file:
+        context.raw_csv = request.uploaded_file
+        context.raw_csv_source = "upload"
+        context.raw_csv_rows = request.uploaded_file.count("\n")
+
+    # Get last user message
+    user_message = request.messages[-1].content if request.messages else ""
+
+    # Create LLM call function for orchestrator
+    async def llm_call_fn(conversation: List[Dict[str, str]]) -> str:
+        return await call_llm_with_messages(
+            conversation,
+            request.provider,
+            request.model,
+            request.api_key,
+            request.base_url,
         )
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            if request.provider == "ollama":
-                url = request.base_url or OLLAMA_BASE_URL
-                messages = [{"role": "system", "content": system_prompt}]
-                for msg in request.messages:
-                    messages.append({"role": msg.role, "content": msg.content})
+    # Process message through MCP orchestrator
+    result = await orchestrator.process_message(
+        message=user_message,
+        context=context,
+        llm_call_fn=llm_call_fn,
+        uploaded_file=request.uploaded_file,
+    )
 
-                headers = {"Content-Type": "application/json"}
-                if request.api_key:
-                    headers["Authorization"] = f"Bearer {request.api_key}"
+    # Handle tool call if present
+    if result["type"] == "tool_call" and result["tool_call"]:
+        tool_call = result["tool_call"]
 
-                response = await client.post(
-                    f"{url}/api/chat",
-                    headers=headers,
-                    json={
-                        "model": request.model,
-                        "messages": messages,
-                        "stream": False,
-                    },
-                )
-                if response.status_code != 200:
-                    try:
-                        error_detail = response.json().get("error", response.text)
-                        if "not found" in error_detail.lower():
-                            error_detail = f"Model '{request.model}' not found in Ollama. Please run 'ollama pull {request.model}' or change the model in settings."
-                        else:
-                            error_detail = f"Ollama error: {error_detail}"
-                    except:
-                        error_detail = f"Ollama error: {response.text}"
-                    raise HTTPException(
-                        status_code=response.status_code, detail=error_detail
-                    )
+        # Pre-validate tool parameters
+        validation_error = orchestrator.validate_tool_params(tool_call, context)
+        if validation_error:
+            return ChatResponse(
+                role="assistant",
+                content=f"{result['content']}\n\n⚠️ **Cannot execute tool:** {validation_error}",
+                tool_data=None,
+                thinking_time=round(time.time() - start_time, 2),
+            )
 
-                result = response.json()
-                return ChatResponse(
-                    role="assistant",
-                    content=result.get("message", {}).get(
-                        "content", "No response from LLM"
-                    ),
-                )
+        # Create LLM call function for tool handlers
+        async def tool_llm_fn(prompt: str) -> str:
+            return await call_llm_simple(
+                prompt,
+                request.provider,
+                request.model,
+                request.api_key,
+                request.base_url,
+            )
 
-            elif request.provider == "openai":
-                if not request.api_key:
-                    raise HTTPException(
-                        status_code=400, detail="OpenAI API key is required"
-                    )
+        # Execute the tool
+        try:
+            # Special handling for export_csv - pass context data
+            tool_params = tool_call["params"].copy()
+            if tool_call["tool"] == "export_csv":
+                tool_params["context_data"] = {
+                    "raw_csv": context.raw_csv,
+                    "binary_matrix_csv": context.binary_matrix_csv,
+                    "clustered_csv": context.clustered_csv,
+                }
 
-                messages = [{"role": "system", "content": system_prompt}]
-                for msg in request.messages:
-                    messages.append({"role": msg.role, "content": msg.content})
+            tool_result = await execute_tool(
+                server_name=tool_call["server"],
+                tool_name=tool_call["tool"],
+                params=tool_params,
+                llm_call_fn=tool_llm_fn,
+            )
+            print("tool_result", tool_result)
 
-                response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {request.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={"model": request.model, "messages": messages},
-                )
-                if response.status_code != 200:
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"OpenAI error: {response.text}",
-                    )
+            # Update context with tool result
+            orchestrator.update_context(context, tool_call, tool_result)
 
-                result = response.json()
-                return ChatResponse(
-                    role="assistant", content=result["choices"][0]["message"]["content"]
-                )
+            # Clean up the LLM response using shared utility
+            response_content = clean_llm_response(result["content"])
 
-            elif request.provider == "anthropic":
-                if not request.api_key:
-                    raise HTTPException(
-                        status_code=400, detail="Anthropic API key is required"
-                    )
+            # If response is empty after cleanup, provide a default message
+            if not response_content:
+                response_content = get_default_response(tool_call["tool"])
 
-                # Anthropic uses a separate 'system' parameter for the system prompt
-                messages = []
-                for msg in request.messages:
-                    messages.append({"role": msg.role, "content": msg.content})
+            # Build result summary using centralized formatter
+            result_summary = format_tool_result(tool_call["tool"], tool_result)
+            response_content += result_summary
 
-                response = await client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": request.api_key,
-                        "anthropic-version": "2023-06-01",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": request.model,
-                        "messages": messages,
-                        "system": system_prompt,
-                        "max_tokens": 1024,
-                    },
-                )
-                if response.status_code != 200:
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"Anthropic error: {response.text}",
-                    )
+            return ChatResponse(
+                role="assistant",
+                content=response_content,
+                tool_data={
+                    "tool": tool_call["tool"],
+                    "server": tool_call["server"],
+                    "result": tool_result,
+                },
+                thinking_time=round(time.time() - start_time, 2),
+            )
 
-                result = response.json()
-                return ChatResponse(
-                    role="assistant", content=result["content"][0]["text"]
-                )
+        except Exception as e:
+            error_msg = str(e) or e.__class__.__name__ or "Unknown error"
+            return ChatResponse(
+                role="assistant",
+                content=f"{result['content']}\n\n❌ **Tool execution failed:** {error_msg}",
+                tool_data=None,
+                thinking_time=round(time.time() - start_time, 2),
+            )
 
-            elif request.provider == "gemini":
-                if not request.api_key:
-                    raise HTTPException(
-                        status_code=400, detail="Gemini API key is required"
-                    )
-
-                # Gemini format: contents: [{role: 'user', parts: [{text: '...'}]}]
-                # System prompt is prepended or handled via system_instruction (v1beta)
-                contents = []
-                # Combine system prompt with the first user message or handle it properly
-                # For simplicity, we'll prepend it to the first message if it's user, or just as a separate part
-
-                # Convert messages to Gemini format
-                # backend/app/api/chat.py: request.messages needs to be converted
-                for msg in request.messages:
-                    role = "user" if msg.role == "user" else "model"
-                    contents.append({"role": role, "parts": [{"text": msg.content}]})
-
-                # Prepend system prompt to the first user message content or add as system instruction
-                # We'll use the 'system_instruction' field available in v1beta
-
-                response = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/{request.model}:generateContent?key={request.api_key}",
-                    json={
-                        "contents": contents,
-                        "system_instruction": {"parts": [{"text": system_prompt}]},
-                    },
-                )
-                if response.status_code != 200:
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"Gemini error: {response.text}",
-                    )
-
-                result = response.json()
-                return ChatResponse(
-                    role="assistant",
-                    content=result["candidates"][0]["content"]["parts"][0]["text"],
-                )
-
-            else:
-                raise HTTPException(
-                    status_code=400, detail=f"Unsupported provider: {request.provider}"
-                )
-
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="LLM request timeout")
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=str(e))
+    # Regular conversational response
+    return ChatResponse(
+        role="assistant",
+        content=result["content"],
+        tool_data=None,
+        thinking_time=round(time.time() - start_time, 2),
+    )
 
 
 @router.get("/models")
 async def list_models(
-    provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None
+    provider: str = "ollama",
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
 ):
     """
-    Fetch available models for a given provider.
+    List available models from the LLM provider.
     """
     try:
-        # Use explicit connect and read timeouts to prevent hanging
-        timeout = httpx.Timeout(connect=2.0, read=3.0, write=3.0, pool=3.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             if provider == "ollama":
                 url = base_url or OLLAMA_BASE_URL
                 headers = {}
@@ -218,73 +322,113 @@ async def list_models(
                     headers["Authorization"] = f"Bearer {api_key}"
 
                 response = await client.get(f"{url}/api/tags", headers=headers)
+
                 if response.status_code == 200:
-                    models = [m["name"] for m in response.json().get("models", [])]
+                    # Handle UTF-8 encoding properly
+                    models_data = response.json().get("models", [])
+                    models = []
+                    for m in models_data:
+                        try:
+                            model_name = m.get("name", "")
+                            if model_name:
+                                models.append(str(model_name))
+                        except (UnicodeEncodeError, UnicodeDecodeError):
+                            continue
                     return {"models": models}
                 else:
-                    return {"models": [], "error": f"Ollama API error: {response.text}"}
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Failed to fetch models: {response.text}",
+                    )
 
             elif provider == "openai":
                 if not api_key:
-                    return {"models": [], "error": "API key required"}
+                    raise HTTPException(
+                        status_code=400, detail="API key required for OpenAI"
+                    )
+
                 response = await client.get(
                     "https://api.openai.com/v1/models",
                     headers={"Authorization": f"Bearer {api_key}"},
                 )
+
                 if response.status_code == 200:
-                    # Filter for chat models
-                    models = [
-                        m["id"]
-                        for m in response.json().get("data", [])
-                        if "gpt" in m["id"]
-                    ]
+                    data = response.json()
+                    models = [m["id"] for m in data.get("data", [])]
+                    # Filter to chat models
+                    chat_models = [m for m in models if "gpt" in m.lower()]
+                    return {"models": sorted(chat_models)}
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Failed to fetch OpenAI models: {response.text}",
+                    )
+
+            elif provider == "anthropic":
+                if not api_key:
+                    raise HTTPException(
+                        status_code=400, detail="API key required for Anthropic"
+                    )
+
+                # Anthropic doesn't have a models API, so we return a static list of known models
+                # Validate API key by making a simple request
+                response = await client.get(
+                    "https://api.anthropic.com/v1/models",
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                    },
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    models = [m["id"] for m in data.get("data", [])]
                     return {"models": sorted(models)}
                 else:
+                    # If the models endpoint fails, return known models as fallback
                     return {
-                        "models": [],
-                        "error": f"OpenAI API error: {response.status_code}",
+                        "models": [
+                            "claude-sonnet-4-20250514",
+                            "claude-3-5-sonnet-20241022",
+                            "claude-3-5-haiku-20241022",
+                            "claude-3-opus-20240229",
+                            "claude-3-haiku-20240307",
+                        ]
                     }
 
             elif provider == "gemini":
                 if not api_key:
-                    return {"models": [], "error": "API key required"}
+                    raise HTTPException(
+                        status_code=400, detail="API key required for Gemini"
+                    )
+
                 response = await client.get(
-                    f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                    f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}",
                 )
+
                 if response.status_code == 200:
-                    models = [
-                        m["name"].split("/")[-1]
-                        for m in response.json().get("models", [])
-                        if "generateContent" in m.get("supportedGenerationMethods", [])
-                    ]
+                    data = response.json()
+                    models = []
+                    for m in data.get("models", []):
+                        # Extract model name from full path (e.g., "models/gemini-pro" -> "gemini-pro")
+                        name = m.get("name", "").replace("models/", "")
+                        # Filter to generative models
+                        if name and "gemini" in name.lower():
+                            models.append(name)
                     return {"models": sorted(models)}
                 else:
-                    return {
-                        "models": [],
-                        "error": f"Gemini API error: {response.status_code}",
-                    }
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Failed to fetch Gemini models: {response.text}",
+                    )
 
-            elif provider == "anthropic":
-                # Anthropic doesn't have a public models list API
-                return {
-                    "models": [
-                        "claude-3-5-sonnet-20241022",
-                        "claude-3-5-sonnet-20240620",
-                        "claude-3-5-haiku-20241022",
-                        "claude-3-opus-20240229",
-                        "claude-3-sonnet-20240229",
-                        "claude-3-haiku-20240307",
-                        "claude-2.1",
-                        "claude-2.0",
-                        "claude-instant-1.2",
-                    ]
-                }
+            else:
+                return {"models": []}
 
-            return {"models": [], "error": f"Unknown provider: {provider}"}
-
-    except httpx.ConnectError as e:
-        return {"models": [], "error": f"Connection failed: {str(e)}"}
-    except httpx.TimeoutException:
-        return {"models": [], "error": "Request timeout"}
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot connect to {provider}. Please check if the service is running.",
+        )
     except Exception as e:
-        return {"models": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))

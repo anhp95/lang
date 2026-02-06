@@ -38,13 +38,19 @@ const PROVIDERS = [
 const modelCache: Record<string, { models: string[], timestamp: number }> = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  onAddToMap?: (csvData: string, layerName: string) => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAddToMap }) => {
+
   const [isOpen, setIsOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{role: string, content: string}>>([]);
+  const [messages, setMessages] = useState<Array<{role: string, content: string, toolData?: any, thinkingTime?: number}>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [customModel, setCustomModel] = useState(false);
+  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   // LLM Settings
   const [provider, setProvider] = useState(() => localStorage.getItem('chat_provider') || 'ollama');
@@ -54,6 +60,10 @@ const ChatInterface: React.FC = () => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  
+  // File upload state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     localStorage.setItem('chat_provider', provider);
@@ -185,18 +195,24 @@ const ChatInterface: React.FC = () => {
           provider: provider === 'ollama-cloud' ? 'ollama' : provider,
           api_key: apiKey || undefined,
           base_url: provider === 'ollama' ? ollamaUrl : (provider === 'ollama-cloud' ? 'https://api.ollama.com' : undefined),
-          context: 'User is viewing a research platform with language, archaeology, and genetics data.'
+          context: 'User is viewing a research platform with language, archaeology, and genetics data.',
+          session_id: sessionId
         })
       });
       
       if (response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
-      } else {
-        const errorData = await response.json();
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          content: `Error: ${errorData.detail || 'Something went wrong.'}` 
+          content: data.content,
+          toolData: data.tool_data,
+          thinkingTime: data.thinking_time
+        }]);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error: ${errorData.detail || response.statusText}` 
         }]);
       }
     } catch (error) {
@@ -207,6 +223,91 @@ const ChatInterface: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      alert('Please upload a CSV file');
+      return;
+    }
+
+    setUploadedFile(file);
+    setIsLoading(true);
+    
+    // Read file content
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const csvContent = e.target?.result as string;
+      
+      // Add a system message locally
+      const userMessage = { 
+        role: 'user', 
+        content: `I've uploaded a file: ${file.name}` 
+      };
+      setMessages(prev => [...prev, userMessage]);
+      
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [...messages, userMessage],
+            model: model,
+            provider: provider === 'ollama-cloud' ? 'ollama' : provider,
+            api_key: apiKey || undefined,
+            base_url: provider === 'ollama' ? ollamaUrl : (provider === 'ollama-cloud' ? 'https://api.ollama.com' : undefined),
+            context: 'User is uploading a linguistic data file.',
+            session_id: sessionId,
+            uploaded_file: csvContent
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: data.content,
+            toolData: data.tool_data,
+            thinkingTime: data.thinking_time
+          }]);
+        } else {
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: 'Failed to process the uploaded file.' 
+          }]);
+        }
+      } catch (error) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: 'Connection error while uploading file.' 
+        }]);
+      } finally {
+        setIsLoading(false);
+        setUploadedFile(null); // Clear after upload
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+
+  const downloadCSV = (csvData: string, filename: string) => {
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   if (!isOpen) {
@@ -369,21 +470,100 @@ const ChatInterface: React.FC = () => {
                   ? 'bg-blue-500 text-white rounded-br-none' 
                   : 'bg-white border text-gray-800 rounded-bl-none shadow-sm'
               }`}>
-                {msg.content}
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+
+                {msg.role === 'assistant' && msg.thinkingTime !== undefined && (
+                  <div className="mt-1 text-[10px] text-gray-400 italic flex items-center gap-1 border-t border-gray-100 pt-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Thinking time: {msg.thinkingTime}s
+                  </div>
+                )}
+                
+                {/* Display CSV action buttons if tool data is available */}
+                {msg.toolData?.result?.csv && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => downloadCSV(
+                        msg.toolData.result.csv, 
+                        msg.toolData.result.filename || `linguistic_data_${Date.now()}.csv`
+                      )}
+                      className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition flex items-center gap-1"
+                    >
+                      📥 Download CSV
+                      {msg.toolData.result.row_count && (
+                        <span className="opacity-75">({msg.toolData.result.row_count} rows)</span>
+                      )}
+                    </button>
+                    {onAddToMap && msg.toolData.result.csv && msg.toolData.result.csv.trim().split('\n').length > 1 && (
+                      <button
+                        onClick={() => {
+                          try {
+                            onAddToMap(
+                              msg.toolData.result.csv,
+                              msg.toolData.tool || `layer_${Date.now()}`
+                            );
+                            // Visual feedback
+                            const btn = document.activeElement as HTMLButtonElement;
+                            if (btn) {
+                              btn.textContent = '✅ Added!';
+                              btn.disabled = true;
+                              setTimeout(() => {
+                                btn.textContent = '🗺️ Add to Map';
+                                btn.disabled = false;
+                              }, 2000);
+                            }
+                          } catch (e) {
+                            console.error('Failed to add to map:', e);
+                          }
+                        }}
+                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition flex items-center gap-1 disabled:opacity-50"
+                      >
+                        🗺️ Add to Map
+                      </button>
+                    )}
+                  </div>
+                )}
+
+
+                {/* Display wordlist if available */}
+                {msg.toolData?.result?.wordlist && msg.toolData.result.wordlist.length > 0 && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                    <div className="font-semibold text-blue-700 mb-1">Wordlist ({msg.toolData.result.wordlist.length} concepts)</div>
+                    <div className="text-gray-600 flex flex-wrap gap-1">
+                      {msg.toolData.result.wordlist.slice(0, 15).map((word: string, i: number) => (
+                        <span key={i} className="bg-white px-1.5 py-0.5 rounded border">{word}</span>
+                      ))}
+                      {msg.toolData.result.wordlist.length > 15 && (
+                        <span className="text-gray-400">+{msg.toolData.result.wordlist.length - 15} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border p-2 rounded-lg rounded-bl-none shadow-sm">
-                <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                <div className="flex flex-col space-y-2">
+                  {uploadedFile && (
+                    <div className="text-xs text-blue-500 font-medium italic">
+                      Processing {uploadedFile.name}...
+                    </div>
+                  )}
+                  <div className="flex space-x-1">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
+
         </div>
         
         <div className="p-3 bg-white border-t">
@@ -393,15 +573,34 @@ const ChatInterface: React.FC = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask about the data..."
-              className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ask about the data or start a linguistic analysis..."
+              className="flex-1 border rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+            
+            {/* File upload button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="hidden"
             />
             <button
-              onClick={handleSend}
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition"
+              title="Upload CSV file"
               disabled={isLoading}
-              className={`bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading ? '...' : 'Send'}
+              📎
+            </button>
+            
+            <button
+              onClick={handleSend}
+              disabled={isLoading || !message.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+            >
+              Send
             </button>
           </div>
         </div>

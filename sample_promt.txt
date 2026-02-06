@@ -1,0 +1,4 @@
+1. Could you propose a list of words that are closely related to the topic of tapa beater?
+2. Could you search for corresponding lexical forms of these words across as many languages as possible?
+3. Could you convert this data to a binary_matrix format for clustering?
+4. Could you perform clustering on this data?

@@ -8,3 +8,5 @@ requests
 shapely
 python-dotenv
 httpx
+scikit-learn
+hdbscan
