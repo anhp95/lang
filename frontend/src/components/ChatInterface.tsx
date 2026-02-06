@@ -60,6 +60,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAddToMap }) => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  const [expandedWordlists, setExpandedWordlists] = useState<Record<number, boolean>>({});
   
   // File upload state
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -529,15 +530,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAddToMap }) => {
 
                 {/* Display wordlist if available */}
                 {msg.toolData?.result?.wordlist && msg.toolData.result.wordlist.length > 0 && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
-                    <div className="font-semibold text-blue-700 mb-1">Wordlist ({msg.toolData.result.wordlist.length} concepts)</div>
-                    <div className="text-gray-600 flex flex-wrap gap-1">
-                      {msg.toolData.result.wordlist.slice(0, 15).map((word: string, i: number) => (
-                        <span key={i} className="bg-white px-1.5 py-0.5 rounded border">{word}</span>
+                  <div className="mt-2 p-3 bg-blue-50/50 rounded-xl text-xs border border-blue-100/50">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="font-black text-blue-700 uppercase tracking-widest text-[10px]">Wordlist ({msg.toolData.result.wordlist.length} concepts)</div>
+                        {msg.toolData.result.wordlist.length > 15 && (
+                            <button 
+                                onClick={() => setExpandedWordlists(prev => ({ ...prev, [index]: !prev[index] }))}
+                                className="text-blue-600 hover:text-blue-800 font-bold uppercase text-[9px] tracking-tight hover:underline"
+                            >
+                                {expandedWordlists[index] ? 'Collapse ↑' : `+${msg.toolData.result.wordlist.length - 15} more ↓`}
+                            </button>
+                        )}
+                    </div>
+                    <div className="text-gray-600 flex flex-wrap gap-1.5">
+                      {(expandedWordlists[index] ? msg.toolData.result.wordlist : msg.toolData.result.wordlist.slice(0, 15)).map((word: string, i: number) => (
+                        <span key={i} className="bg-white/80 px-2 py-1 rounded-lg border border-blue-100/50 shadow-sm font-medium transition-all hover:scale-105">{word}</span>
                       ))}
-                      {msg.toolData.result.wordlist.length > 15 && (
-                        <span className="text-gray-400">+{msg.toolData.result.wordlist.length - 15} more</span>
-                      )}
                     </div>
                   </div>
                 )}

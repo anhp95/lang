@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 interface CatalogProps {
   onAddDataset: (dataType: string, dataset: string, filters?: any) => void;
-  onUploadData: (data: any, filteredData: any, name: string, coords: {lat: string, lon: string}, type: string) => void;
+  onUploadData: (data: any, filteredData: any, name: string, coords: {lat: string, lon: string}, type: string, geoData?: any) => void;
   onClose: () => void;
 }
 
@@ -20,23 +20,11 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }
   const [isGlossDropdownOpen, setIsGlossDropdownOpen] = useState(false);
   const [lastSelectedGloss, setLastSelectedGloss] = useState<string | null>(null);
   
+  const [isDragging, setIsDragging] = useState(false);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsGlossDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     const MAX_SIZE = 50 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
         setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 50MB.`);
@@ -64,7 +52,7 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }
         setUploadProgress(100);
         if (xhr.status >= 200 && xhr.status < 300) {
             const result = JSON.parse(xhr.responseText);
-            onUploadData(result.data, result.filtered_data || result.data, result.name, result.coordinates, result.type);
+            onUploadData(result.data, result.filtered_data || result.data, result.name, result.coordinates, result.type, result.geo_data);
         } else {
             const err = JSON.parse(xhr.responseText || '{"detail":"Upload failed"}');
             setError(err.detail || 'Upload failed');
@@ -78,6 +66,36 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }
 
     xhr.open('POST', 'http://localhost:8000/api/v1/upload');
     xhr.send(formData);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        processFile(file);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        processFile(file);
+    }
   };
 
   const getFilteredCatalog = useMemo(() => {
@@ -358,26 +376,53 @@ const Catalog: React.FC<CatalogProps> = ({ onAddDataset, onUploadData, onClose }
             </div>
         </div>
         
-        {/* Upload Banner */}
-        <div className="px-6 py-3 bg-linear-to-r from-blue-600 to-indigo-700 flex items-center justify-between shadow-inner">
-            <div className="flex items-center space-x-4">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a1 1 0 001 1h14a1 1 0 001-1v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+        {/* Large Upload Drop Zone */}
+        <div 
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`
+                mx-6 mt-6 p-8 border-4 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all relative overflow-hidden group/upload shrink-0 min-h-[160px]
+                ${isDragging ? 'border-blue-500 bg-blue-50 shadow-2xl scale-[1.02]' : 'border-gray-200 bg-gray-50/50 hover:border-blue-400 hover:bg-gray-50'}
+                ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}
+            `}
+            onClick={() => !isUploading && document.getElementById('catalog-file-input')?.click()}
+        >
+            <input 
+                id="catalog-file-input"
+                type="file" 
+                className="hidden" 
+                accept=".csv,.geojson,.json" 
+                onChange={handleFileChange} 
+                disabled={isUploading} 
+            />
+
+            {isUploading ? (
+                <div className="flex flex-col items-center py-4">
+                    <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4" />
+                    <span className="text-sm font-black text-gray-800 uppercase tracking-widest">Uploading {Math.round(uploadProgress)}%</span>
                 </div>
-                <div>
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">Cloud Upload</h3>
-                    <p className="text-[10px] text-blue-100 opacity-80 font-bold">CSV/GeoJSON • Multiple Formats • SSL Encrypted</p>
-                </div>
-            </div>
-            <label className={`
-                px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all cursor-pointer shadow-lg
-                ${isUploading ? 'bg-white/10 text-white/40 cursor-wait' : 'bg-white text-blue-600 hover:scale-105 active:scale-95'}
-            `}>
-                {isUploading ? `Uploading ${Math.round(uploadProgress)}%` : 'Select Files'}
-                <input type="file" className="hidden" accept=".csv,.geojson,.json" onChange={handleFileChange} disabled={isUploading} />
-            </label>
+            ) : (
+                <>
+                    <div className={`p-5 rounded-2xl mb-4 transition-all duration-500 ${isDragging ? 'bg-blue-600 scale-110' : 'bg-white shadow-xl group-hover/upload:scale-110'}`}>
+                        <svg className={`w-10 h-10 ${isDragging ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-lg font-black text-gray-800 tracking-tight uppercase">
+                            {isDragging ? 'Drop Files Now' : 'Click or Drag Data Here'}
+                        </h3>
+                        <p className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-widest">
+                            Support CSV, GeoJSON and JSON (Max 50MB)
+                        </p>
+                    </div>
+                    
+                    {isDragging && (
+                        <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-[2px] pointer-events-none" />
+                    )}
+                </>
+            )}
         </div>
         
         <div className="flex-1 overflow-auto p-6 space-y-8 custom-scrollbar bg-gray-50/50">

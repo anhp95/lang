@@ -3,7 +3,7 @@ import { WebMercatorViewport } from '@math.gl/web-mercator';
 import Map from 'react-map-gl/mapbox';
 import DeckGL from '@deck.gl/react';
 import { TileLayer } from '@deck.gl/geo-layers';
-import { BitmapLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { BitmapLayer, ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import { tableFromIPC } from 'apache-arrow';
 import { Rnd } from 'react-rnd';
 import LayerManager from './components/LayerManager';
@@ -35,6 +35,11 @@ interface LayerConfig {
   isSpatial?: boolean;
   pointSize?: number;
   stroked?: boolean;
+  geoData?: any;
+  lineWidth?: number;
+  strokeColor?: [number, number, number];
+  fillOpacity?: number;
+  dashPattern?: boolean;
 }
 
 interface DetailWindowData {
@@ -182,35 +187,98 @@ function App() {
     });
   }, [layers]);
 
-  const handleUploadData = (data: any[], filteredData: any[], name: string, coords: {lat: string, lon: string}, fileType: string) => {
+  const handleUploadData = (data: any[], filteredData: any[], name: string, coords: {lat: string, lon: string}, fileType: string, geoData?: any) => {
     const id = `upload_${name}_${Date.now()}`;
     const randomColors: [number, number, number][] = [
         [255, 120, 0], [0, 200, 100], [0, 120, 255], [255, 50, 50], [150, 0, 150]
     ];
 
+    const hasGeoData = !!geoData;
+    const isSpatial = hasGeoData || !!(coords.lat && coords.lon);
+
     // Create layer with in-memory data
     const newLayer: LayerConfig = {
       id,
       name,
-      type: `user_upload_${fileType}`,
+      type: fileType === 'geojson' ? 'user_upload_geojson' : `user_upload_${fileType}`,
       dataset: name,
       visible: true,
       opacity: 0.9,
       color: randomColors[Math.floor(Math.random() * randomColors.length)],
       filters: {
-          // Inject detected coordinate keys for consistent access
           coords_lon: coords.lon || 'longitude',
           coords_lat: coords.lat || 'latitude'
       },
       data,
       filteredData,
-      vizField: undefined,
-      isSpatial: !!(coords.lat && coords.lon),
+      geoData,
+      isSpatial,
       pointSize: 8
     };
 
     setLayers(prev => [...prev, newLayer]);
     setIsCatalogOpen(false);
+
+    // Zoom to bounds if spatial
+    if (isSpatial) {
+        let bounds: [number, number, number, number] | null = null;
+
+        if (geoData) {
+            // Function to get coords from any GeoJSON geometry
+            const getCoords = (geom: any): number[][] => {
+                if (!geom) return [];
+                if (geom.type === 'Point') return [geom.coordinates];
+                if (geom.type === 'LineString' || geom.type === 'MultiPoint') return geom.coordinates;
+                if (geom.type === 'Polygon' || geom.type === 'MultiLineString') return geom.coordinates.flat();
+                if (geom.type === 'MultiPolygon') return geom.coordinates.flat(2);
+                if (geom.type === 'GeometryCollection') return geom.geometries.flatMap(getCoords);
+                return [];
+            };
+
+            const allCoords: number[][] = [];
+            if (geoData.type === 'FeatureCollection') {
+                geoData.features.forEach((f: any) => allCoords.push(...getCoords(f.geometry)));
+            } else if (geoData.type === 'Feature') {
+                allCoords.push(...getCoords(geoData.geometry));
+            } else {
+                allCoords.push(...getCoords(geoData));
+            }
+
+            if (allCoords.length > 0) {
+                const lons = allCoords.map(c => c[0]);
+                const lats = allCoords.map(c => c[1]);
+                bounds = [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
+            }
+        } else if (filteredData.length > 0) {
+            const lons = filteredData.map(d => d[coords.lon]);
+            const lats = filteredData.map(d => d[coords.lat]);
+            bounds = [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
+        }
+
+        if (bounds) {
+            const [minLon, minLat, maxLon, maxLat] = bounds;
+            const viewport = new WebMercatorViewport({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            
+            try {
+                const { longitude, latitude, zoom } = viewport.fitBounds(
+                    [[minLon, minLat], [maxLon, maxLat]],
+                    { padding: 100 }
+                );
+                setViewState(prev => ({
+                    ...prev,
+                    longitude,
+                    latitude,
+                    zoom: Math.min(zoom, 12), // Don't zoom in too far
+                    transitionDuration: 1000
+                }));
+            } catch (e) {
+                console.error("Failed to fit bounds", e);
+            }
+        }
+    }
   };
 
   // Handle CSV data from chat interface "Add to Map" button
@@ -438,6 +506,22 @@ function App() {
     }));
   };
 
+  const handleLineWidthChange = (layerId: string, width: number) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? { ...l, lineWidth: width } : l));
+  };
+
+  const handleStrokeColorChange = (layerId: string, color: [number, number, number]) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? { ...l, strokeColor: color } : l));
+  };
+
+  const handleFillOpacityChange = (layerId: string, opacity: number) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? { ...l, fillOpacity: opacity } : l));
+  };
+
+  const handleDashPatternChange = (layerId: string, enabled: boolean) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? { ...l, dashPattern: enabled } : l));
+  };
+
   const handleOpenTable = (layerId: string) => {
     setOpenTableLayerIds(prev => {
         if (prev.includes(layerId)) return prev;
@@ -450,15 +534,22 @@ function App() {
   const handleMapClick = useCallback((info: any) => {
     if (info.object) {
       const layer = layers.find(l => l.id === info.layer.id);
+      
+      // For GeoJSON features, the data is in 'properties'
+      const isGeoJson = info.object.type === 'Feature';
+      const properties = isGeoJson ? info.object.properties : info.object;
+      
       let lon = 0;
       let lat = 0;
 
-      if (layer && layer.filters?.coords_lon && layer.filters?.coords_lat) {
-          lon = parseFloat(info.object[layer.filters.coords_lon] || 0);
-          lat = parseFloat(info.object[layer.filters.coords_lat] || 0);
+      if (info.coordinate) {
+          [lon, lat] = info.coordinate;
+      } else if (layer && layer.filters?.coords_lon && layer.filters?.coords_lat) {
+          lon = parseFloat(properties[layer.filters.coords_lon] || 0);
+          lat = parseFloat(properties[layer.filters.coords_lat] || 0);
       } else {
-          lon = parseFloat(info.object.Longitude || info.object.longitude || info.object.Lon || info.object.lon || info.object.lng || info.object.Lng || info.object.x || info.object.X || 0);
-          lat = parseFloat(info.object.Latitude || info.object.latitude || info.object.Lat || info.object.lat || info.object.y || info.object.Y || 0);
+          lon = parseFloat(properties.Longitude || properties.longitude || properties.Lon || properties.lon || properties.lng || properties.Lng || properties.x || properties.X || 0);
+          lat = parseFloat(properties.Latitude || properties.latitude || properties.Lat || properties.lat || properties.y || properties.Y || 0);
       }
 
       const newWindow: DetailWindowData = {
@@ -467,7 +558,7 @@ function App() {
         y: Math.random() * (window.innerHeight - 350) + 50,
         width: 400,
         height: 300,
-        data: info.object,
+        data: properties,
         layerId: info.layer.id,
         lon,
         lat
@@ -552,6 +643,40 @@ function App() {
             }
           })
         );
+      } else if (l.geoData) {
+        deckLayers.push(new GeoJsonLayer({
+          id: l.id,
+          data: l.geoData,
+          pickable: true,
+          stroked: true,
+          filled: true,
+          extruded: true,
+          pointType: 'circle',
+          
+          // Point Styling
+          getPointRadius: l.pointSize || 8,
+          getFillColor: [...l.color, 255 * l.opacity],
+          
+          // Line Styling
+          getLineColor: l.strokeColor ? [...l.strokeColor, 255 * (l.opacity || 1)] : (l.geoData.type === 'LineString' || l.geoData.type === 'MultiLineString' ? [...l.color, 255 * (l.opacity || 1)] : [255, 255, 255, 255 * (l.opacity || 1)]),
+          getLineWidth: l.lineWidth || 2,
+          getDashArray: l.dashPattern ? [4, 2] : undefined,
+          
+          // Polygon Styling
+          updateTriggers: {
+              getFillColor: [l.color, l.fillOpacity, l.opacity]
+          },
+          getPolygonFillColor: () => {
+              const baseColor = l.color || [0, 120, 255];
+              const fillOp = l.fillOpacity !== undefined ? l.fillOpacity : 0.5;
+              return [...baseColor, 255 * l.opacity * fillOp];
+          },
+          
+          opacity: l.opacity,
+          lineWidthMinPixels: 1,
+          pointRadiusMinPixels: 2,
+          dashJustified: true
+        }));
       } else if (l.data && l.isSpatial) {
         const scale = scales[l.id];
         // Use filteredData (records with valid coordinates) for map visualization
@@ -653,6 +778,10 @@ function App() {
         onBaseMapChange={handleBaseMapChange}
         baseMapStyle={baseMapStyle}
         mapboxToken={MAPBOX_TOKEN}
+        onLineWidthChange={handleLineWidthChange}
+        onStrokeColorChange={handleStrokeColorChange}
+        onFillOpacityChange={handleFillOpacityChange}
+        onDashPatternChange={handleDashPatternChange}
       />
 
       <LegendPanel layers={layers} schema={schema} />

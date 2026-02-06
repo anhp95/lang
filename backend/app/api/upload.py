@@ -153,43 +153,64 @@ async def upload_file(file: UploadFile = File(...)):
                 with open(file_path, "r", encoding="latin1") as f:
                     geojson = json.load(f)
 
-            # Handle standard list of records or FeatureCollection
-            if isinstance(geojson, list):
-                # Standard JSON array of objects
+            geo_data = None
+            detected = {"lat": None, "lon": None}
+
+            # Handle FeatureCollection
+            if isinstance(geojson, dict) and geojson.get("type") == "FeatureCollection":
+                geo_data = geojson
+                features = geojson.get("features", [])
+                data = [f.get("properties", {}) for f in features]
+
+                # Try to extract representative lat/lon if they are Points
+                for feat in features:
+                    geom = feat.get("geometry", {})
+                    if geom and geom.get("type") == "Point":
+                        coords = geom.get("coordinates", [])
+                        if len(coords) >= 2:
+                            detected = {"lat": "latitude", "lon": "longitude"}
+                            break
+
+                # If we detected Point features, inject lat/lon into properties for the table/logic
+                if detected["lat"]:
+                    for i, feat in enumerate(features):
+                        geom = feat.get("geometry", {})
+                        if geom and geom.get("type") == "Point":
+                            coords = geom.get("coordinates", [])
+                            data[i]["longitude"] = coords[0]
+                            data[i]["latitude"] = coords[1]
+
+            # Handle standard list of records
+            elif isinstance(geojson, list):
                 data = geojson
                 if len(data) > 0:
                     keys = list(data[0].keys())
                     detected = detect_coordinates(keys)
+
+            # Handle single Feature or Geometry (rare)
+            elif isinstance(geojson, dict) and geojson.get("type") in [
+                "Feature",
+                "Point",
+                "LineString",
+                "Polygon",
+                "MultiPoint",
+                "MultiLineString",
+                "MultiPolygon",
+            ]:
+                geo_data = geojson
+                if geojson.get("type") == "Feature":
+                    data = [geojson.get("properties", {})]
                 else:
-                    detected = {"lat": None, "lon": None}
-
-            elif geojson.get("type") == "FeatureCollection":
-                features = geojson.get("features", [])
-                for feat in features:
-                    props = feat.get("properties", {})
-                    geom = feat.get("geometry", {})
-
-                    # Extract coords if point
-                    if geom and geom.get("type") == "Point":
-                        coords = geom.get("coordinates", [])
-                        if len(coords) >= 2:
-                            props["longitude"] = coords[0]
-                            props["latitude"] = coords[1]
-
-                    data.append(props)
-
-                # For GeoJSON, we explicitly know we added these keys if they existed as Points
-                detected = {"lat": "latitude", "lon": "longitude"}
+                    data = []
             else:
-                # Try simple key detection on root object if it's a single record (rare but possible)
                 if isinstance(geojson, dict):
                     data = [geojson]
                     keys = list(geojson.keys())
                     detected = detect_coordinates(keys)
                 else:
-                    detected = {"lat": None, "lon": None}
+                    data = []
 
-            # Filter data with valid coordinates for map visualization
+            # Filter data with valid coordinates for map visualization (if point-based)
             filtered_data = []
             if detected["lat"] and detected["lon"]:
                 lat_col = detected["lat"]
@@ -211,7 +232,8 @@ async def upload_file(file: UploadFile = File(...)):
                 "data": data,
                 "filtered_data": filtered_data,
                 "coordinates": detected,
-                "type": "json",
+                "type": "geojson" if geo_data else "json",
+                "geo_data": geo_data,
             }
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")

@@ -31,6 +31,11 @@ interface LayerConfig {
   isSpatial?: boolean;
   pointSize?: number;
   stroked?: boolean;
+  geoData?: any;
+  lineWidth?: number;
+  strokeColor?: [number, number, number];
+  fillOpacity?: number;
+  dashPattern?: boolean;
 }
 
 interface BaseMapStyle {
@@ -66,6 +71,10 @@ interface LayerManagerProps {
   onBaseMapChange: (style: string) => void;
   baseMapStyle: string;
   mapboxToken?: string;
+  onLineWidthChange?: (layerId: string, width: number) => void;
+  onStrokeColorChange?: (layerId: string, color: [number, number, number]) => void;
+  onFillOpacityChange?: (layerId: string, opacity: number) => void;
+  onDashPatternChange?: (layerId: string, enabled: boolean) => void;
 }
 
 const LayerManager: React.FC<LayerManagerProps> = ({
@@ -84,7 +93,11 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   schema,
   onBaseMapChange,
   baseMapStyle,
-  mapboxToken
+  mapboxToken,
+  onLineWidthChange,
+  onStrokeColorChange,
+  onFillOpacityChange,
+  onDashPatternChange
 }) => {
   const [expandedFilters, setExpandedFilters] = useState<string | null>(null);
   const [openPaletteId, setOpenPaletteId] = useState<string | null>(null);
@@ -181,6 +194,14 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           const isFilterExpanded = expandedFilters === layer.id;
           const layerSchema = schema[layer.id] || [];
           const selectedField = layerSchema.find(f => f.name === layer.vizField);
+
+          const hasGeoData = !!layer.geoData;
+          const isPoint = !hasGeoData || 
+            (layer.geoData.type === 'FeatureCollection' ? layer.geoData.features.some((f: any) => f.geometry.type.includes('Point')) : layer.geoData.type.includes('Point'));
+          const isLine = hasGeoData && 
+            (layer.geoData.type === 'FeatureCollection' ? layer.geoData.features.some((f: any) => f.geometry.type.includes('LineString')) : layer.geoData.type.includes('LineString'));
+          const isPolygon = hasGeoData && 
+            (layer.geoData.type === 'FeatureCollection' ? layer.geoData.features.some((f: any) => f.geometry.type.includes('Polygon')) : layer.geoData.type.includes('Polygon'));
 
           return (
             <div key={layer.id} className={`border rounded-xl p-3 transition-all ${layer.visible ? 'bg-white shadow-sm border-gray-200' : 'bg-gray-50/50 opacity-60 border-transparent scale-[0.98]'}`}>
@@ -384,20 +405,30 @@ const LayerManager: React.FC<LayerManagerProps> = ({
                   </div>
 
                    {/* Visual Settings Section */}
-                   <div className="space-y-3 py-2 border-t border-b bg-gray-50/30 px-1">
+                   <div className="space-y-4 py-3 border-t border-b bg-gray-50/30 px-2">
                       {!layer.vizField && (
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Base Color</label>
+                             <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Base Color</label>
+                                {(isLine || isPolygon) && (
+                                    <button 
+                                        onClick={() => onStrokeColorChange?.(layer.id, [255, 255, 255])}
+                                        className="text-[8px] font-black text-blue-600 uppercase hover:underline"
+                                    >
+                                        Reset Stroke
+                                    </button>
+                                )}
+                             </div>
                              <div className="flex flex-wrap gap-2">
                                 {[
                                     [255, 120, 0], [0, 200, 100], [0, 120, 255], 
-                                    [255, 50, 50], [150, 0, 150], [255, 200, 0], 
+                                    [255, 50, 50], [150, 10, 150], [255, 200, 0], 
                                     [0, 0, 0], [255, 255, 255]
                                 ].map((c: any, i) => (
                                     <button 
                                         key={i}
                                         onClick={() => onColorChange(layer.id, c)}
-                                        className={`w-5 h-5 rounded-full border border-gray-200 transition-transform hover:scale-110 ${JSON.stringify(layer.color) === JSON.stringify(c) ? 'ring-2 ring-blue-500 scale-110 shadow-sm' : ''}`}
+                                        className={`w-6 h-6 rounded-lg border border-gray-200 transition-all hover:scale-110 shadow-sm ${JSON.stringify(layer.color) === JSON.stringify(c) ? 'ring-2 ring-blue-500 scale-110' : ''}`}
                                         style={{backgroundColor: `rgb(${c[0]}, ${c[1]}, ${c[2]})`}}
                                     />
                                 ))}
@@ -405,46 +436,89 @@ const LayerManager: React.FC<LayerManagerProps> = ({
                           </div>
                       )}
 
-                      <div className="flex items-center justify-between">
-                         <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Marker Size</span>
-                         <div className="flex items-center space-x-2 flex-1 ml-4">
-                            <input
-                                type="range"
-                                min="1"
-                                max="50"
-                                step="1"
-                                value={layer.pointSize || 6}
-                                onChange={(e) => onPointSizeChange(layer.id, parseInt(e.target.value))}
-                                className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
-                            <span className="text-[9px] text-gray-500 font-mono w-6">{layer.pointSize || 6}px</span>
-                         </div>
-                      </div>
+                      {/* Point Specific Controls */}
+                      {isPoint && (
+                          <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Marker Size</span>
+                                 <div className="flex items-center space-x-2 flex-1 ml-4 text-gray-500">
+                                    <input
+                                        type="range" min="1" max="50" step="1"
+                                        value={layer.pointSize || 6}
+                                        onChange={(e) => onPointSizeChange(layer.id, parseInt(e.target.value))}
+                                        className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <span className="text-[10px] font-mono w-6">{layer.pointSize || 6}</span>
+                                 </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Outline (Stroked)</span>
+                                <button 
+                                    onClick={() => onStrokedChange(layer.id, !layer.stroked)}
+                                    className={`w-8 h-4 rounded-full transition-colors relative ${layer.stroked ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                >
+                                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${layer.stroked ? 'left-4.5' : 'left-0.5'}`} />
+                                </button>
+                              </div>
+                          </div>
+                      )}
 
-                      <div className="flex items-center justify-between">
+                      {/* Line Specific Controls */}
+                      {isLine && (
+                          <div className="space-y-3 pt-2 border-t border-gray-100">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Line Width</span>
+                                 <div className="flex items-center space-x-2 flex-1 ml-4 text-gray-500">
+                                    <input
+                                        type="range" min="1" max="20" step="1"
+                                        value={layer.lineWidth || 2}
+                                        onChange={(e) => onLineWidthChange?.(layer.id, parseInt(e.target.value))}
+                                        className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <span className="text-[10px] font-mono w-6">{layer.lineWidth || 2}</span>
+                                 </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Dash Pattern</span>
+                                <button 
+                                    onClick={() => onDashPatternChange?.(layer.id, !layer.dashPattern)}
+                                    className={`w-8 h-4 rounded-full transition-colors relative ${layer.dashPattern ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                >
+                                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${layer.dashPattern ? 'left-4.5' : 'left-0.5'}`} />
+                                </button>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* Polygon Specific Controls */}
+                      {isPolygon && (
+                          <div className="space-y-3 pt-2 border-t border-gray-100">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Fill Opacity</span>
+                                 <div className="flex items-center space-x-2 flex-1 ml-4 text-gray-500">
+                                    <input
+                                        type="range" min="0" max="1" step="0.05"
+                                        value={layer.fillOpacity !== undefined ? layer.fillOpacity : 0.5}
+                                        onChange={(e) => onFillOpacityChange?.(layer.id, parseFloat(e.target.value))}
+                                        className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <span className="text-[10px] font-mono w-6">{Math.round((layer.fillOpacity !== undefined ? layer.fillOpacity : 0.5) * 100)}%</span>
+                                 </div>
+                              </div>
+                          </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                         <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Global Opacity</span>
-                        <div className="flex items-center space-x-2 flex-1 ml-4">
+                        <div className="flex items-center space-x-2 flex-1 ml-4 text-gray-500">
                             <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
+                                type="range" min="0" max="1" step="0.01"
                                 value={layer.opacity}
                                 onChange={(e) => onOpacityChange(layer.id, parseFloat(e.target.value))}
                                 className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                             />
-                            <span className="text-[9px] text-gray-500 font-mono w-6">{Math.round(layer.opacity * 100)}</span>
+                            <span className="text-[10px] font-mono w-6">{Math.round(layer.opacity * 100)}</span>
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Outline (Stroked)</span>
-                        <button 
-                            onClick={() => onStrokedChange(layer.id, !layer.stroked)}
-                            className={`w-8 h-4 rounded-full transition-colors relative ${layer.stroked ? 'bg-blue-600' : 'bg-gray-300'}`}
-                        >
-                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${layer.stroked ? 'left-4.5' : 'left-0.5'}`} />
-                        </button>
                       </div>
                    </div>
                 </div>
